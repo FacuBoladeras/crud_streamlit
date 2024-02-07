@@ -70,35 +70,36 @@ def main():
 
 
 
-    elif option == "Crear":
-        st.subheader("Agregar usuario")
-        name = st.text_input("Enter Name")
-        contacto = st.text_input("Enter Contacto")
-        poliza = st.text_input("Enter Poliza")
+    elif option == "Modificar":
+        st.subheader("Modificar usuario")
+        poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
+        name = st.text_input("Enter New Name")
+        contacto = st.text_input("Enter New Contacto")
+        poliza = st.text_input("Enter New Poliza")
         compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"])
         tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral"])
-        fecha_de_inicio = st.date_input("Enter Fecha de Inicio")
-        fecha_de_fin = st.date_input("Enter Fecha de fin")
+        fecha_de_inicio = st.date_input("Enter New Fecha de Inicio")
+        fecha_de_fin = st.date_input("Enter New Fecha de fin")
 
-        if st.button("Crear"):
-            sql = "INSERT INTO customers (name, contacto, poliza, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-            val = (name, contacto, poliza, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin)
+        if st.button("Modificar"):
+            sql = "UPDATE customers SET name=%s, contacto=%s, poliza=%s, compañia=%s, tipo_de_plan=%s, fecha_de_inicio=%s, fecha_de_fin=%s WHERE poliza = %s"
+            val = (name, contacto, poliza, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin, poliza_value)
             mycursor.execute(sql, val)
             mydb.commit()
-            st.success("Record Created Successfully!!!")
+            st.success("¡Registro actualizado correctamente!")
 
 
 
 
-    elif option=="Borrar":
-        st.subheader("Delete a Record")
-        id=st.number_input("Enter ID",min_value=1)
+    elif option == "Eliminar":
+        st.subheader("Eliminar un registro")
+        poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
         if st.button("Borrar"):
-            sql="delete from users where id =%s"
-            val=(id,)
-            mycursor.execute(sql,val)
+            sql = "DELETE FROM users WHERE poliza = %s"
+            val = (poliza_value,)
+            mycursor.execute(sql, val)
             mydb.commit()
-            st.success("Record Deleted Successfully!!!")
+            st.success("¡Registro eliminado correctamente!")
 
 
 if __name__ == "__main__":
