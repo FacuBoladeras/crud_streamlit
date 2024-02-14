@@ -88,7 +88,7 @@ def main():
         result_15_30_days = mycursor.fetchall()
 
         # Consulta SQL para los registros con fecha_de_fin vencida
-        sql_expired = "SELECT * FROM customers WHERE compañia = %s AND fecha_de_fin < %s ORDER BY fecha_de_fin ASC"
+        sql_expired = "SELECT * FROM customers WHERE compañia = %s AND fecha_de_fin < %s ORDER BY fecha_de_fin ASC LIMIT 20"
         val_expired = (compañia, today)
         mycursor.execute(sql_expired, val_expired)
         result_expired = mycursor.fetchall()
