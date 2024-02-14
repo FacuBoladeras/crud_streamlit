@@ -22,8 +22,6 @@ mydb = mysql.connector.connect(
 )
 
 
-
-
 mycursor=mydb.cursor()
 print("Connection Established")
 
@@ -31,6 +29,8 @@ print("Connection Established")
 
 def main():
     
+    # Configurar el ancho y alto del lienzo
+    st.set_page_config(layout="wide")  # Esto establece el lienzo en modo ancho   
     st.title("Gestor de clientes Ruben Rabbia seguros 🚗");
 
     # Display Options for CRUD Operations
@@ -184,7 +184,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
 
