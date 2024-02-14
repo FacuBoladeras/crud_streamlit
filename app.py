@@ -4,20 +4,24 @@ import streamlit as st
 import datetime
 # Establish a connection to MySQL Server
 
-#conexion remota
-mydb = mysql.connector.connect(
-    host="viaduct.proxy.rlwy.net",
-    user="root",
-    port=43998,
-    password="Bg1-CcfDfDcG6e3GeFa4hBAaDc5B3CgC",
-    database="railway")
-
-#conexion local
+# #conexion remota railway
 # mydb = mysql.connector.connect(
-#     host="localhost",
+#     host="viaduct.proxy.rlwy.net",
 #     user="root",
-#     password="Soler839",
-#     database="crud_rabbia")
+#     port=43998,
+#     password="Bg1-CcfDfDcG6e3GeFa4hBAaDc5B3CgC",
+#     database="railway")
+
+#conexion remota railway
+mydb = mysql.connector.connect(
+    host="database-rabbia.c1o28sciaahh.us-east-1.rds.amazonaws.com",
+    user="admin",
+    port=3306,
+    password="Soler839",
+    database="rabbia"
+)
+
+
 
 
 mycursor=mydb.cursor()
@@ -30,7 +34,7 @@ def main():
     st.title("Gestor de clientes Ruben Rabbia seguros 🚗");
 
     # Display Options for CRUD Operations
-    titulo = st.sidebar.markdown("# Seleccionar operación")
+    titulo = st.sidebar.markdown("# Seleccionar operación 💻")
     option = st.sidebar.selectbox("  ", ("Crear 🪪", "Buscar 🔎", "Modificar ✏️", "Eliminar ❌"))
     
     if option == "Crear 🪪":
