@@ -14,10 +14,10 @@ import datetime
 
 #conexion remota railway
 mydb = mysql.connector.connect(
-    host="database-rabbia.c1o28sciaahh.us-east-1.rds.amazonaws.com",
+    host="db-rabbia.c1o28sciaahh.us-east-1.rds.amazonaws.com",
     user="admin",
     port=3306,
-    password="Soler839",
+    password="Soler_839",
     database="rabbia"
 )
 
@@ -35,9 +35,9 @@ def main():
 
     # Display Options for CRUD Operations
     titulo = st.sidebar.markdown("# Seleccionar operación 💻")
-    option = st.sidebar.selectbox("  ", ("Crear 🪪", "Buscar 🔎", "Modificar ✏️", "Eliminar ❌"))
+    option = st.sidebar.selectbox("  ", ("Crear 📝", "Buscar 🔎", "Modificar ✏️", "Eliminar ❌"))
     
-    if option == "Crear 🪪":
+    if option == "Crear 📝":
         st.subheader("Agregar usuario ✅")
         name = st.text_input("Nombre")
         contacto = st.text_input("Contacto")
