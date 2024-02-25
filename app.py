@@ -51,7 +51,7 @@ def main():
         if st.button("Crear usuario", type="primary"):  # Clave única para el botón Crear usuario
             if name and contacto and poliza:
                 try:
-                    sql = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                    sql = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
                     val = (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin)
                     mycursor.execute(sql, val)
                     mydb.commit()
@@ -165,20 +165,22 @@ def main():
             st.text(f"Nombre actual: {result[1]}")
             st.text(f"Contacto actual: {result[2]}")
             st.text(f"Póliza actual: {result[3]}")
-            st.text(f"Compañia actual: {result[4]}")
-            st.text(f"Tipo de plan actual: {result[5]}")
-            st.text(f"Fecha de Inicio actual: {result[6]}")
-            st.text(f"Fecha de fin actual: {result[7]}")
+            st.text(f"Descripcion actual: {result[4]}")
+            st.text(f"Compañia actual: {result[5]}")
+            st.text(f"Tipo de plan actual: {result[6]}")
+            st.text(f"Fecha de Inicio actual: {result[7]}")
+            st.text(f"Fecha de fin actual: {result[8]}")
             
             st.subheader("Modificar usuario ✏️")
             # Campos para ingresar los nuevos valores
             name = st.text_input("Nombre", value=result[1])
             contacto = st.text_input("Contacto", value=result[2])
             poliza = st.text_input("Poliza", value=result[3])
-            compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"], index=["RUS", "RIVADAVIA", "COOP"].index(result[4]))
-            tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral"], index=["Trimestral", "Cuatrimestral", "Semestral"].index(result[5]))
-            fecha_de_inicio = st.date_input("Fecha de Inicio", value=result[6])
-            fecha_de_fin = st.date_input("New Fecha de fin", value=result[7])
+            descripcion = st.text_input("Descripción",  value=result[4])
+            compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"], index=["RUS", "RIVADAVIA", "COOP"].index(result[5]))
+            tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral"], index=["Trimestral", "Cuatrimestral", "Semestral"].index(result[6]))
+            fecha_de_inicio = st.date_input("Fecha de Inicio", value=result[7])
+            fecha_de_fin = st.date_input("New Fecha de fin", value=result[8])
 
             if st.button("Modificar", type="primary"):
                         # Insertar un nuevo registro en la base de datos
@@ -208,10 +210,11 @@ def main():
             st.text(f"Nombre: {result[1]}")
             st.text(f"Contacto: {result[2]}")
             st.text(f"Póliza: {result[3]}")
-            st.text(f"Compañía: {result[4]}")
-            st.text(f"Tipo de plan: {result[5]}")
-            st.text(f"Fecha de Inicio: {result[6]}")
-            st.text(f"Fecha de fin: {result[7]}")
+            st.text(f"Descripcion: {result[4]}")
+            st.text(f"Compañía: {result[5]}")
+            st.text(f"Tipo de plan: {result[6]}")
+            st.text(f"Fecha de Inicio: {result[7]}")
+            st.text(f"Fecha de fin: {result[8]}")
             
             # Botón para confirmar el borrado
             if st.button("Borrar", type="primary"):

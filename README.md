@@ -7,7 +7,7 @@ sudo apt upgrade -y
 
 sudo apt install git curl unzip tar make sudo vim wget -y
 
-git clone "Your-repository"
+git clone https://github.com/FacuBoladeras/crud_streamlit.git
 
 sudo apt install python3-pip
 
