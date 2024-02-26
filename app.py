@@ -44,20 +44,29 @@ def main():
         poliza = st.text_input("Poliza")
         descripcion = st.text_input("Descripción")
         compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"])
-        tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral"])
+        tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral","Anual"])
         fecha_de_inicio = st.date_input("Fecha de Inicio")
         fecha_de_fin = st.date_input("Fecha de fin")
 
         if st.button("Crear usuario", type="primary"):  # Clave única para el botón Crear usuario
             if name and contacto and poliza:
-                try:
-                    sql = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-                    val = (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin)
-                    mycursor.execute(sql, val)
-                    mydb.commit()
-                    st.success("Creado exitosamente ✅")
-                except Exception as e:
-                    st.error(f"Error al crear el usuario: {e}")
+                # Consultar si la póliza ya existe en la base de datos
+                sql_check_poliza = "SELECT * FROM customers WHERE poliza = %s"
+                val_check_poliza = (poliza,)
+                mycursor.execute(sql_check_poliza, val_check_poliza)
+                existing_poliza = mycursor.fetchone()
+
+                if existing_poliza:
+                    st.warning("La póliza ingresada ya existe. Por favor, ingresa una póliza diferente.")
+                else:
+                    try:
+                        sql = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                        val = (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin)
+                        mycursor.execute(sql, val)
+                        mydb.commit()
+                        st.success("Creado exitosamente ✅")
+                    except Exception as e:
+                        st.error(f"Error al crear el usuario: {e}")
             else:
                 st.warning("Por favor completa todos los campos antes de continuar.")
 
@@ -94,16 +103,27 @@ def main():
         mycursor.execute(sql_expired, val_expired)
         result_expired = mycursor.fetchall()
         
-        columas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion","Compañia", "Tipo de plan", "Fecha de inicio", "Vencimiento"]
+        # Consulta SQL para obtener los últimos 20 registros ingresados
+        sql_last_20 = "SELECT * FROM customers ORDER BY id DESC LIMIT 20"
+        mycursor.execute(sql_last_20)
+        result_last_20 = mycursor.fetchall()
+
+        # Definir las columnas para la tabla
+        columnas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion", "Compañia", "Tipo de plan", "Fecha de inicio", "Vencimiento"]
+
         # Mostrar los resultados en Streamlit como tablas
         st.subheader("Vencimiento en los próximos 15 días")
-        st.table(pd.DataFrame(result_0_15_days, columns=columas))
+        st.table(pd.DataFrame(result_0_15_days, columns=columnas))
 
-        st.subheader("Vencimiento desde los 15 a los 30 dias")
-        st.table(pd.DataFrame(result_15_30_days, columns=columas))
+        st.subheader("Vencimiento desde los 15 a los 30 días")
+        st.table(pd.DataFrame(result_15_30_days, columns=columnas))
 
         st.subheader("Pólizas vencidas")
-        st.table(pd.DataFrame(result_expired, columns=columas))
+        st.table(pd.DataFrame(result_expired, columns=columnas))
+
+        st.subheader("Últimos 20 usuarios ingresados")
+        st.table(pd.DataFrame(result_last_20, columns=columnas))
+
 
 
 
@@ -136,7 +156,7 @@ def main():
             poliza = st.text_input("Poliza", value=result[3])
             descripcion = st.text_input("Descripción", value=result[4])
             compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"], index=["RUS", "RIVADAVIA", "COOP"].index(result[5]))
-            tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral"], index=["Trimestral", "Cuatrimestral", "Semestral"].index(result[6]))
+            tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral"], index=["Trimestral", "Cuatrimestral", "Semestral", "Anual"].index(result[6]))
             fecha_de_inicio = st.date_input("Fecha de Inicio", value=result[7])
             fecha_de_fin = st.date_input("New Fecha de fin", value=result[8])
 
@@ -178,17 +198,26 @@ def main():
             poliza = st.text_input("Poliza", value=result[3])
             descripcion = st.text_input("Descripción",  value=result[4])
             compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"], index=["RUS", "RIVADAVIA", "COOP"].index(result[5]))
-            tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral"], index=["Trimestral", "Cuatrimestral", "Semestral"].index(result[6]))
+            tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral", "Anual"], index=["Trimestral", "Cuatrimestral", "Semestral", "Anual"].index(result[6]))
             fecha_de_inicio = st.date_input("Fecha de Inicio", value=result[7])
             fecha_de_fin = st.date_input("New Fecha de fin", value=result[8])
 
             if st.button("Modificar", type="primary"):
-                        # Insertar un nuevo registro en la base de datos
-                        sql_insert = "INSERT INTO customers (name, contacto, poliza, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-                        val_insert = (name, contacto, poliza, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin)
-                        mycursor.execute(sql_insert, val_insert)
-                        mydb.commit()
-                        st.success("Poliza actualizda correctamente ✅")
+                # Verificar si la póliza ya existe en la base de datos
+                sql_check_poliza = "SELECT * FROM customers WHERE poliza = %s"
+                val_check_poliza = (poliza,)
+                mycursor.execute(sql_check_poliza, val_check_poliza)
+                existing_poliza = mycursor.fetchone()
+
+                if existing_poliza:
+                    st.warning("La póliza ingresada es la misma. Modifique la poliza.")
+                else:
+                    # Insertar un nuevo registro en la base de datos para renovar la póliza
+                    sql_insert = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                    val_insert = (name, contacto, poliza, descripcion, compañia, tipo_de_plan, fecha_de_inicio, fecha_de_fin)
+                    mycursor.execute(sql_insert, val_insert)
+                    mydb.commit()
+                    st.success("Poliza renovada correctamente ✅")
 
 
 
