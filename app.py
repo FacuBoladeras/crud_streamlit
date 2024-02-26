@@ -156,7 +156,7 @@ def main():
             poliza = st.text_input("Poliza", value=result[3])
             descripcion = st.text_input("Descripción", value=result[4])
             compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"], index=["RUS", "RIVADAVIA", "COOP"].index(result[5]))
-            tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral"], index=["Trimestral", "Cuatrimestral", "Semestral", "Anual"].index(result[6]))
+            tipo_de_plan = st.selectbox("Tipo de plan", ["Trimestral", "Cuatrimestral", "Semestral", "Anual"], index=["Trimestral", "Cuatrimestral", "Semestral", "Anual"].index(result[6]))
             fecha_de_inicio = st.date_input("Fecha de Inicio", value=result[7])
             fecha_de_fin = st.date_input("New Fecha de fin", value=result[8])
 
