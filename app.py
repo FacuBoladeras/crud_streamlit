@@ -14,10 +14,10 @@ import datetime
 
 #conexion remota railway
 mydb = mysql.connector.connect(
-    host="db-rabbia.c1o28sciaahh.us-east-1.rds.amazonaws.com",
+    host="rabbia-db.c1o28sciaahh.us-east-1.rds.amazonaws.com",
     user="admin",
     port=3306,
-    password="Soler_839",
+    password="Soler839",
     database="rabbia"
 )
 
