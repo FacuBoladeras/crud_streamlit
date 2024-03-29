@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "streamlit",
+            "type": "python",
+            "request": "launch",
+            "program": "C:\\Users\\Facu\\Desktop\\crud_streamlit\\main.py",            
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["run"],
+            "env": {
+                "STREAMLIT_SERVER_PORT": "8501" // Puerto en el que se ejecuta el servidor de Streamlit
+            }
+        }
+    ]
+}
