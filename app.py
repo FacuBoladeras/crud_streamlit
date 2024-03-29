@@ -116,7 +116,7 @@ def buscar():
         poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
 
         # Consulta SQL para buscar el registro con el valor de la póliza ingresado
-        sql = "SELECT * FROM customers WHERE poliza = %s"
+        sql = "SELECT * FROM customers WHERE poliza = %s ORDER BY id DESC LIMIT 1"
         val = (poliza_value,)
         mycursor.execute(sql, val)
         result = mycursor.fetchone()
@@ -137,7 +137,7 @@ def buscar():
         nombre_value = st.text_input("Ingrese el nombre a filtrar")
 
         # Consulta SQL para buscar el registro con el valor de la póliza ingresado
-        sql = "SELECT * FROM customers WHERE name = %s"
+        sql = "SELECT * FROM customers WHERE name = %s ORDER BY id DESC LIMIT 1"
         val = (nombre_value,)
         mycursor.execute(sql, val)
         result = mycursor.fetchone()
@@ -199,7 +199,7 @@ def modificar():
 
 
 def renovar():
-        st.subheader("Buscar usuario 🔎")        
+        st.subheader("Renovar cuota ♻️")        
         # Campo para ingresar el valor de la póliza a filtrar
         poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
 
