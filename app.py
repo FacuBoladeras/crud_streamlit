@@ -1,24 +1,43 @@
 import mysql.connector
 import pandas as pd
+from functools import wraps
 import streamlit as st
 import datetime
-# Establish a connection to MySQL Server
-
-    #conexion remota railway
-mydb = mysql.connector.connect(
-    host="rabbia-db.c1o28sciaahh.us-east-1.rds.amazonaws.com",
-    user="admin",
-    port=3306,
-    password="Soler839",
-    database="rabbia"
-)
+from conexion import establecer_conexion, cerrar_conexion
 
 
-mycursor=mydb.cursor(buffered=True)
-print("Connection Established")
 
 
-def crear():    
+def manejar_conexion(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Establecer conexión
+        mydb, mycursor = establecer_conexion()
+        
+        # Ejecutar la función con la conexión
+        result = func(mydb, mycursor, *args, **kwargs)
+        
+        # Cerrar conexión
+        cerrar_conexion(mydb, mycursor)
+        
+        return result
+    return wrapper
+
+
+
+#     #conexion remota railway
+# mydb = mysql.connector.connect(
+#     host="rabbia-db.c1o28sciaahh.us-east-1.rds.amazonaws.com",
+#     user="admin",
+#     port=3306,
+#     password="Soler839",
+#     database="rabbia"
+# )
+# mycursor=mydb.cursor(buffered=True)
+# print("Connection Established")
+
+@manejar_conexion
+def crear(mydb, mycursor):    
         st.subheader("Agregar usuario ✅")
         name = st.text_input("Nombre")
         contacto = st.text_input("Contacto")
@@ -53,8 +72,8 @@ def crear():
             else:
                 st.warning("Por favor completa todos los campos antes de continuar.")
 
-
-def vencimientos():
+@manejar_conexion
+def vencimientos(mydb, mycursor):
     # Compañia seleccionada
     st.subheader("Vencimientos de cuotas 📜")
     
@@ -105,9 +124,10 @@ def vencimientos():
 
     st.subheader("Últimos 20 usuarios ingresados")
     st.table(pd.DataFrame(result_last_20, columns=columnas))
+    
 
-
-def buscar():
+@manejar_conexion
+def buscar(mydb, mycursor):
     
     st.subheader("Buscar usuario 🔎")
     option = st.selectbox(" ",("Por poliza 📝", "Por nombre 🧑"))
@@ -154,7 +174,8 @@ def buscar():
             st.text(f"Numero de cuota: {result[8]}")
             st.text(f"Vencimiento de cuota: {result[9]}")
             
-def modificar():    
+@manejar_conexion           
+def modificar(mydb, mycursor):    
     st.subheader("Buscar usuario 🔎")        
     # Campo para ingresar el valor de la póliza a filtrar
     poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
@@ -197,8 +218,8 @@ def modificar():
             mydb.commit()
             st.success("Registro actualizado correctamente ✅")
 
-
-def renovar():
+@manejar_conexion
+def renovar(mydb, mycursor):
         st.subheader("Renovar cuota ♻️")        
         # Campo para ingresar el valor de la póliza a filtrar
         poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
@@ -244,8 +265,8 @@ def renovar():
                 st.success("Datos modificados correctamente ✅")
 
 
-
-def eliminar():
+@manejar_conexion
+def eliminar(mydb, mycursor):
     st.subheader("Eliminar un registro ❌")
     
     # Campo para ingresar el valor de la póliza a borrar
@@ -271,7 +292,7 @@ def eliminar():
             st.text(f"Vencimiento de cuota: {result[9]}")
 
             # Botón para confirmar el borrado
-            if st.button(f"Borrar {result[3]}", key=result[0],type="primary"):
+            if st.button(f"Borrar cuota {result[8]}", key=result[0],type="primary"):
                 # Consulta SQL para eliminar el registro actual
                 sql_delete = "DELETE FROM customers WHERE id = %s"
                 val_delete = (result[0],)  # El ID del registro actual

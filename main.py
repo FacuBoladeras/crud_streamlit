@@ -8,6 +8,9 @@ from app import crear, vencimientos,modificar, renovar, eliminar,buscar
 
 
 
+
+
+
 def main():    
         # Configurar el ancho y alto del lienzo
     st.set_page_config(layout="wide")  # Esto establece el lienzo en modo ancho   
