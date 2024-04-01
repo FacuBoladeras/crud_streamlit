@@ -43,7 +43,7 @@ def crear(mydb, mycursor):
         contacto = st.text_input("Contacto")
         poliza = st.text_input("Poliza")
         descripcion = st.text_input("Descripción")
-        compañia = st.selectbox("Compañia", ["RIVADAVIA","RUS", "COOP"])
+        compañia = st.selectbox("Compañia", ["RIVADAVIA","RUS","COOP"])
         tipo_de_plan = st.selectbox("Duración del plan", ["Anual","Semestral"])
         tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral","Anual"])
         numero_de_cuota = st.selectbox("Numero de cuota", [0,1,2,3,4])
