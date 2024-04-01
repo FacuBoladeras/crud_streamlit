@@ -43,7 +43,7 @@ def crear(mydb, mycursor):
         contacto = st.text_input("Contacto")
         poliza = st.text_input("Poliza")
         descripcion = st.text_input("Descripción")
-        compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"])
+        compañia = st.selectbox("Compañia", ["RIVADAVIA","RUS", "COOP"])
         tipo_de_plan = st.selectbox("Duración del plan", ["Anual","Semestral"])
         tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral","Anual"])
         numero_de_cuota = st.selectbox("Numero de cuota", [0,1,2,3,4])
@@ -77,7 +77,7 @@ def vencimientos(mydb, mycursor):
     # Compañia seleccionada
     st.subheader("Vencimientos de cuotas 📜")
     
-    compañia = st.selectbox("Seleccionar compañia", ["RUS", "RIVADAVIA", "COOP"])
+    compañia = st.selectbox("Seleccionar compañia", ["RIVADAVIA", "RUS", "COOP"])
 
     # Obtener la fecha actual
     today = datetime.date.today()
@@ -204,7 +204,7 @@ def modificar(mydb, mycursor):
         contacto = st.text_input("Contacto", value=result[2])
         poliza = st.text_input("Poliza", value=result[3])
         descripcion = st.text_input("Descripción", value=result[4])
-        compañia = st.selectbox("Compañia", ["RUS", "RIVADAVIA", "COOP"], index=["RUS", "RIVADAVIA", "COOP"].index(result[5]))
+        compañia = st.selectbox("Compañia", ["RIVADAVIA", "RUS", "COOP"], index=[ "RIVADAVIA", "RUS", "COOP"].index(result[5]))
         tipo_de_plan = st.selectbox("Tipo de plan", [ "Anual","Semestral" ], index=["Anual","Semestral"].index(result[6]))
         tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral","Anual"],index=["Trimestral", "Cuatrimestral", "Semestral", "Anual"].index(result[7]))
         numero_de_cuota = st.selectbox("Numero de cuota", [0,1,2,3,4],index=[0,1,2,3,4].index(result[8]))
