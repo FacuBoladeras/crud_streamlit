@@ -4,35 +4,64 @@ import mysql.connector
 import pandas as pd
 import streamlit as st
 import datetime
-from app import crear, vencimientos,modificar, renovar, eliminar,buscar
+from appClientes.app import crear_clientes, vencimientos_clientes,modificar_clientes, renovar_clientes, eliminar_clientes,buscar_clientes
+from appSiniestros.Siniestros import main_siniestros,crear_tabla_vencimientos
+from streamlit_option_menu import option_menu
 
 
+def main():
+    st.set_page_config(layout="wide")  # Configurar el ancho y alto del lienzo
 
+    # Menú horizontal para seleccionar entre las dos aplicaciones
+    selected = option_menu(
+        menu_title=None,
+        options=["Clientes", "Siniestros"],
+        icons=["card-list", "car-front-fill"],
+        default_index=0,
+        orientation="horizontal",
+    )
 
+    # Según la opción seleccionada, ejecuta la función correspondiente
+    if selected == "Clientes":
+        main_clientes()
+    elif selected == "Siniestros":
+        main_siniestros2()
+        
 
-
-def main():    
-        # Configurar el ancho y alto del lienzo
-    st.set_page_config(layout="wide")  # Esto establece el lienzo en modo ancho   
-    st.title("Gestor de clientes Ruben Rabbia seguros 🚗"); 
+def main_clientes():
+    st.title("Gestor de clientes Ruben Rabbia seguros 📚")
     # Display Options for CRUD Operations
     titulo = st.sidebar.markdown("# Seleccionar operación 💻")
-    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️","Buscar 🔎" ,"Modificar ✏️", "Renovar ♻️", "Eliminar ❌"))
-    
-    
-    if option == "Crear 📝": 
-        crear()
+    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️", "Buscar 🔎", "Modificar ✏️", "Renovar ♻️",
+                                         "Eliminar ❌"))
+
+    if option == "Crear 📝":
+        crear_clientes()
     elif option == "Vencimientos ⚠️":
-        vencimientos()
+        vencimientos_clientes()
     elif option == "Buscar 🔎":
-        buscar()
+        buscar_clientes()
     elif option == "Modificar ✏️":
-        modificar()
+        modificar_clientes()
     elif option == "Renovar ♻️":
-        renovar()
+        renovar_clientes()
     elif option == "Eliminar ❌":
-        eliminar()
-    
+        eliminar_clientes()
+
+
+def main_siniestros2():
+    st.title("Gestor de siniestros Ruben Rabbia seguros 🚗")
+    titulo = st.sidebar.markdown("# Seleccionar operación 💻")
+    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️"))
+    if option == "Crear 📝":
+        main_siniestros()
+    elif option == "Vencimientos ⚠️":
+        crear_tabla_vencimientos()
+      # Lógica para mostrar la tabla de siniestros
+
+
+
+
 
 if __name__ == "__main__":
     main()

@@ -1,13 +1,16 @@
 import streamlit as st
 import boto3
 from datetime import datetime
+import pandas as pd
+import streamlit as st
+
 
 # Configuración de la conexión con DynamoDB
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')  # Cambia la región según tu configuración
 table = dynamodb.Table('siniestros-rabbia')  # Reemplaza 'Nombre_de_tu_tabla' por el nombre de tu tabla en DynamoDB
 
 # Función para insertar datos en la tabla de DynamoDB
-def insert(id, nombre, contacto, compañia, descripcion, fecha_inicio, fecha_cobro):
+def insertar_siniestro(id, nombre, contacto, compañia, descripcion, fecha_inicio, fecha_cobro):
     try:
         # Convertir las fechas a strings
         fecha_inicio_str = fecha_inicio.strftime("%Y-%m-%d")
@@ -33,7 +36,7 @@ def insert(id, nombre, contacto, compañia, descripcion, fecha_inicio, fecha_cob
         st.error(f"Error al insertar datos en DynamoDB: {e}")
 
 # Interfaz de usuario para ingresar datos y llamar a la función insert
-def main():
+def main_siniestros():
     st.title("Inserción de Datos en DynamoDB")
 
     # Formulario para ingresar los datos
@@ -48,13 +51,10 @@ def main():
     # Botón para insertar los datos
     if st.button("Insertar Datos"):
         # Llamar a la función insert con los datos ingresados por el usuario
-        insert(id,nombre, contacto, compañia, descripcion, fecha_inicio, fecha_cobro)
+        insertar_siniestro(id,nombre, contacto, compañia, descripcion, fecha_inicio, fecha_cobro)
 
 
 
-
-import pandas as pd
-import streamlit as st
 
 # Función para obtener todos los registros de la tabla de DynamoDB
 def scan_dynamodb_table():
@@ -64,18 +64,21 @@ def scan_dynamodb_table():
     items = response['Items']
     return items
 
+
+def crear_tabla_vencimientos():
 # Obtener todos los registros de la tabla DynamoDB
-data = scan_dynamodb_table()
+    data = scan_dynamodb_table()
 
-# Convertir los datos en un DataFrame de Pandas
-df = pd.DataFrame(data)
+    # Convertir los datos en un DataFrame de Pandas
+    df = pd.DataFrame(data)
 
-# Ordenar el DataFrame por la columna "Fecha de cobro"
-df_sorted = df.sort_values(by='FechaCobro', ascending=False)
+    # Ordenar el DataFrame por la columna "Fecha de cobro"
+    df_sorted = df.sort_values(by='FechaCobro', ascending=False)
 
-# Mostrar el DataFrame ordenado en Streamlit como una tabla
-st.write(df_sorted)
+    # Mostrar el DataFrame ordenado en Streamlit como una tabla
+    st.write(df_sorted)
 
 
+if __name__ == "__main__":
 # Función para consultar datos por campo de fecha
-main()
+    crear_tabla_vencimientos()
