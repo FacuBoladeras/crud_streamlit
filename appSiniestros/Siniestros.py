@@ -128,8 +128,8 @@ def modificar_registro():
     st.subheader("Modificar registro por patente")
 
     patente = st.text_input("Ingrese la patente del registro que desea modificar:")
-    if st.button("Buscar", type="primary"):
-        if patente:
+    
+    if patente:
             # Obtener el registro por patente
             registro = obtener_registros_por_patente(patente)
             if not registro:
