@@ -32,7 +32,7 @@ def insertar_siniestro(nombre, contacto, compañia, patente, descripcion, fecha_
         )
 
         # Mostrar mensaje de éxito
-        st.success("Datos insertados correctamente en DynamoDB.")
+        st.success("Datos insertados correctamente ✅")
     except Exception as e:
         # Mostrar mensaje de error en caso de que ocurra una excepción
         st.error(f"Error al insertar datos en DynamoDB: {e}")
@@ -95,7 +95,7 @@ def buscar_por_patente():
 
 # Función para actualizar un registro
 def actualizar_registro(patente, nuevo_nombre, nuevo_contacto, nueva_compania, nueva_descripcion, nueva_fecha_siniestro, nueva_fecha_denuncia):
-    dynamodb = boto3.resource('dynamodb')
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
     table = dynamodb.Table('siniestros-rabbia')
 
     # Obtener el registro existente
