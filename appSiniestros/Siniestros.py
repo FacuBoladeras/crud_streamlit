@@ -57,7 +57,7 @@ def main_siniestros():
 
 # Función para obtener todos los registros de la tabla de DynamoDB ordenados por fecha de siniestro
 def obtener_registros_por_patente(patente):
-    dynamodb = boto3.resource('dynamodb')
+    dynamodb = boto3.resource('dynamodb',region_name='us-east-1')
     table = dynamodb.Table('siniestros-rabbia')
 
     # Realizar una consulta utilizando la clave de partición (patente) y ordenando por fecha de siniestro

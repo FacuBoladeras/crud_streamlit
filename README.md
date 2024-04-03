@@ -15,11 +15,11 @@ pip3 install -r requirements.txt
 
 python3 -m streamlit run app.py
 
-nohup python3 -m streamlit run app.py
+nohup python3 -m streamlit run main.py
 
 
 # detener y hacer update
 
-ps aux | grep "python3 -m streamlit run app.py"
+ps aux | grep "python3 -m streamlit run main.py"
 kill -9 24122
 git pull origin main
