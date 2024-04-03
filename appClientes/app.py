@@ -50,7 +50,7 @@ def crear_clientes(mydb, mycursor):
         vencimiento_de_cuota = st.date_input("Vencimiento de la cuota")
         
 
-        if st.button("Crear usuario", type="primary"):  # Clave única para el botón Crear usuario
+        if st.button("Crear", type="primary"):  # Clave única para el botón Crear usuario
             if name and contacto and poliza:
                 # Consultar si la póliza ya existe en la base de datos
                 sql_check_poliza = "SELECT * FROM customers WHERE poliza = %s"
