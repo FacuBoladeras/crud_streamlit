@@ -2,11 +2,16 @@ import streamlit as st
 from dateutil.relativedelta import relativedelta
 import mysql.connector
 import pandas as pd
-import streamlit as st
 import datetime
+import boto3
+import uuid
+from boto3.dynamodb.conditions import Key
 from appClientes.app import crear_clientes, vencimientos_clientes,modificar_clientes, renovar_clientes, eliminar_clientes,buscar_clientes
-from appSiniestros.Siniestros import main_siniestros,buscar_por_patente,modificar_registro
 from streamlit_option_menu import option_menu
+from appSiniestros.agreagar_siniestro import agregarSiniestro_st
+from appSiniestros.buscar_siniestro import  buscar_por_patente
+from appSiniestros.modificar_siniestro import modificar_registro
+
 
 
 def main():
@@ -54,12 +59,11 @@ def main_siniestros2():
     titulo = st.sidebar.markdown("# Seleccionar operación 💻")
     option = st.sidebar.selectbox("  ", ("Crear 📝", "Buscar por patente 🔎", "Modificar ✏️"))
     if option == "Crear 📝":
-        main_siniestros()
+        agregarSiniestro_st()
     elif option == "Buscar por patente 🔎":
         buscar_por_patente()
     elif option == "Modificar ✏️":
         modificar_registro()
-
     
     
 
