@@ -124,7 +124,7 @@ def vencimientos_clientes(mydb, mycursor):
     st.subheader("Cuotas vencidas")
     st.table(pd.DataFrame(result_expired, columns=columnas))
 
-    st.subheader("Últimos 20 usuarios con estado 'Sin pagar'")
+    st.subheader("Últimos 20 usuarios ingresados")
     st.table(pd.DataFrame(result_last_20_sin_pagar, columns=columnas))
 
     st.subheader("Últimos 20 pagados")
@@ -134,38 +134,39 @@ def vencimientos_clientes(mydb, mycursor):
 
 @manejar_conexion
 def logica_de_pago(mydb, mycursor):
-    st.subheader("Buscar usuario por poliza🔎")
+    st.subheader("Buscar usuario por póliza 🔎")
        
     # Campo para ingresar el valor de la póliza a filtrar
     poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
 
-    # Consulta SQL para buscar el registro con el valor de la póliza ingresado
-    sql = "SELECT * FROM customers WHERE poliza = %s ORDER BY id DESC LIMIT 1"
+    # Consulta SQL para buscar los registros con el valor de la póliza ingresado
+    sql = "SELECT * FROM customers WHERE poliza = %s"
     val = (poliza_value,)
     mycursor.execute(sql, val)
-    result = mycursor.fetchone()
+    results = mycursor.fetchall()
 
-    if result:
+    if results:
+        for result in results:
+            st.text(f"ID: {result[0]}")
             st.text(f"Nombre actual: {result[1]}")
             st.text(f"Contacto actual: {result[2]}")
             st.text(f"Póliza actual: {result[3]}")
-            st.text(f"Descripcion actual: {result[4]}")
-            st.text(f"Compañia actual: {result[5]}")
+            st.text(f"Descripción actual: {result[4]}")
+            st.text(f"Compañía actual: {result[5]}")
             st.text(f"Tipo de plan actual: {result[6]}")
-            st.text(f"Tipo de facturacion: {result[7]}")
-            st.text(f"Numero de cuota: {result[8]}")
+            st.text(f"Tipo de facturación: {result[7]}")
+            st.text(f"Número de cuota: {result[8]}")
             st.text(f"Vencimiento de cuota: {result[9]}")
             st.text(f"Estado de cuota: {result[10]}")
 
-            # Botón para marcar como pagado
-            if st.button("Marcar como Pagado", key='marcar_pagado',type="primary"):
-                # Consulta SQL para actualizar el estado a "Pagado"
+            # Botón para marcar como Pagado para el registro actual
+            if st.button(f"Marcar como Pagado (Vencimiento: {result[9]})", key=f'marcar_pagado_{result[0]}', type="primary"):
+                # Consulta SQL para actualizar el estado a "Pagado" solo para este registro
                 update_sql = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
-                mycursor.execute(update_sql, (result[0],))  # result[0] es el id del usuario
+                mycursor.execute(update_sql, (result[0],))  # result[0] es el id del registro
                 mydb.commit()  # Confirmar la transacción
 
-                st.success("Estado actualizado a 'Pagado' con éxito.")
-
+                st.success(f"Estado actualizado con éxito para el vencimiento.")
 
 
 @manejar_conexion
