@@ -288,6 +288,7 @@ def renovar_clientes(mydb, mycursor):
             st.text(f"Tipo de facturacion: {result[7]}")
             st.text(f"Numero de cuota: {result[8]}")
             st.text(f"Vencimiento de cuota: {result[9]}")
+            st.text(f"Estado de cuota: {result[10]}")
             
             
             st.subheader("Modificar usuario ✏️")
@@ -302,7 +303,7 @@ def renovar_clientes(mydb, mycursor):
                 modified_values[9] = vencimiento_de_cuota  # Índice de la columna 'vencimiento_de_cuota'
 
                 # Insertar un nuevo registro con los valores modificados
-                sql_insert = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, numero_de_cuota, vencimiento_de_cuota) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                sql_insert = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, numero_de_cuota, vencimiento_de_cuota,estado) VALUES (%s, %s, %s, %s, %s, %s, %s, %s,%s,%s)"
                 val_insert = tuple(modified_values[1:])  # Ignorar el ID al insertar
                 mycursor.execute(sql_insert, val_insert)
                 mydb.commit()
