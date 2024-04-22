@@ -4,7 +4,7 @@ import mysql.connector
 import pandas as pd
 import streamlit as st
 import datetime
-from appClientes.app import crear_clientes, vencimientos_clientes,modificar_clientes, renovar_clientes, eliminar_clientes,buscar_clientes
+from appClientes.app import crear_clientes, vencimientos_clientes,modificar_clientes, renovar_clientes, eliminar_clientes,buscar_clientes, logica_de_pago
 from appSiniestros.Siniestros import main_siniestros,buscar_por_patente,modificar_registro
 from streamlit_option_menu import option_menu
 
@@ -32,13 +32,15 @@ def main_clientes():
     st.title("Gestor de clientes Ruben Rabbia seguros 📚")
     # Display Options for CRUD Operations
     titulo = st.sidebar.markdown("# Seleccionar operación 💻")
-    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️", "Buscar 🔎", "Modificar ✏️", "Renovar ♻️",
+    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️", "Logica de pago", "Buscar 🔎", "Modificar ✏️", "Renovar ♻️",
                                          "Eliminar ❌"))
 
     if option == "Crear 📝":
         crear_clientes()
     elif option == "Vencimientos ⚠️":
         vencimientos_clientes()
+    elif option == "Logica de pago":
+        logica_de_pago()
     elif option == "Buscar 🔎":
         buscar_clientes()
     elif option == "Modificar ✏️":
@@ -47,7 +49,6 @@ def main_clientes():
         renovar_clientes()
     elif option == "Eliminar ❌":
         eliminar_clientes()
-
 
 def main_siniestros2():
     st.title("Gestor de siniestros Ruben Rabbia seguros 🚗")

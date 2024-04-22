@@ -48,6 +48,7 @@ def crear_clientes(mydb, mycursor):
         tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral","Anual"])
         numero_de_cuota = st.selectbox("Numero de cuota", [0,1,2,3,4])
         vencimiento_de_cuota = st.date_input("Vencimiento de la cuota")
+        estado = st.selectbox("Estado de la cuota", ["Sin pagar","Pagado"])
         
 
         if st.button("Crear", type="primary"):  # Clave única para el botón Crear usuario
@@ -62,8 +63,8 @@ def crear_clientes(mydb, mycursor):
                     st.warning("La póliza ingresada ya existe. Por favor, ingresa una póliza diferente.")
                 else:
                     try:
-                        sql = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan,tipo_de_facturacion,numero_de_cuota,vencimiento_de_cuota) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
-                        val = (name, contacto, poliza, descripcion, compañia, tipo_de_plan,tipo_de_facturacion,numero_de_cuota,vencimiento_de_cuota)
+                        sql = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan,tipo_de_facturacion,numero_de_cuota,vencimiento_de_cuota,estado) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s,%s)"
+                        val = (name, contacto, poliza, descripcion, compañia, tipo_de_plan,tipo_de_facturacion,numero_de_cuota,vencimiento_de_cuota,estado)
                         mycursor.execute(sql, val)
                         mydb.commit()
                         st.success("Creado exitosamente ✅")
@@ -110,7 +111,7 @@ def vencimientos_clientes(mydb, mycursor):
     result_last_20 = mycursor.fetchall()
 
     # Definir las columnas para la tabla
-    columnas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion", "Compañia", "Tipo de plan", "Tipo de facturacion", "Numero de cuota", "Vencimiento de cuota"]
+    columnas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion", "Compañia", "Tipo de plan", "Tipo de facturacion", "Numero de cuota", "Vencimiento de cuota", "Estado"]
 
     # Mostrar los resultados en Streamlit como tablas
     st.subheader("Vencimiento en los próximos 7 días")
@@ -125,6 +126,41 @@ def vencimientos_clientes(mydb, mycursor):
     st.subheader("Últimos 20 usuarios ingresados")
     st.table(pd.DataFrame(result_last_20, columns=columnas))
     
+@manejar_conexion
+def logica_de_pago(mydb, mycursor):
+    st.subheader("Buscar usuario por poliza🔎")
+       
+    # Campo para ingresar el valor de la póliza a filtrar
+    poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
+
+    # Consulta SQL para buscar el registro con el valor de la póliza ingresado
+    sql = "SELECT * FROM customers WHERE poliza = %s ORDER BY id DESC LIMIT 1"
+    val = (poliza_value,)
+    mycursor.execute(sql, val)
+    result = mycursor.fetchone()
+
+    if result:
+            st.text(f"Nombre actual: {result[1]}")
+            st.text(f"Contacto actual: {result[2]}")
+            st.text(f"Póliza actual: {result[3]}")
+            st.text(f"Descripcion actual: {result[4]}")
+            st.text(f"Compañia actual: {result[5]}")
+            st.text(f"Tipo de plan actual: {result[6]}")
+            st.text(f"Tipo de facturacion: {result[7]}")
+            st.text(f"Numero de cuota: {result[8]}")
+            st.text(f"Vencimiento de cuota: {result[9]}")
+            st.text(f"Estado de cuota: {result[10]}")
+
+            # Botón para marcar como pagado
+            if st.button("Marcar como Pagado", key='marcar_pagado'):
+                # Consulta SQL para actualizar el estado a "Pagado"
+                update_sql = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
+                mycursor.execute(update_sql, (result[0],))  # result[0] es el id del usuario
+                mydb.commit()  # Confirmar la transacción
+
+                st.success("Estado actualizado a 'Pagado' con éxito.")
+
+
 
 @manejar_conexion
 def buscar_clientes(mydb, mycursor):
@@ -151,6 +187,7 @@ def buscar_clientes(mydb, mycursor):
             st.text(f"Tipo de facturacion: {result[7]}")
             st.text(f"Numero de cuota: {result[8]}")
             st.text(f"Vencimiento de cuota: {result[9]}")
+            st.text(f"Estado de cuota: {result[10]}")
             
     elif option == "Por nombre 🧑":
         
@@ -173,6 +210,7 @@ def buscar_clientes(mydb, mycursor):
             st.text(f"Tipo de facturacion: {result[7]}")
             st.text(f"Numero de cuota: {result[8]}")
             st.text(f"Vencimiento de cuota: {result[9]}")
+            st.text(f"Estado de cuota: {result[10]}")
             
 @manejar_conexion           
 def modificar_clientes(mydb, mycursor):    
@@ -197,6 +235,7 @@ def modificar_clientes(mydb, mycursor):
         st.text(f"Tipo de facturacion: {result[7]}")
         st.text(f"Numero de cuota: {result[8]}")
         st.text(f"Vencimiento de cuota: {result[9]}")
+        st.text(f"Estado de cuota: {result[10]}")
         
         st.subheader("Modificar usuario ✏️")
         # Campos para ingresar los nuevos valores
@@ -299,15 +338,6 @@ def eliminar_clientes(mydb, mycursor):
                 mycursor.execute(sql_delete, val_delete)
                 mydb.commit()
                 st.success("Registro eliminado correctamente ✅")
-
-
-
-
-
-
-
-
-
 
 
 
