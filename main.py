@@ -6,7 +6,7 @@ import datetime
 import boto3
 import uuid
 from boto3.dynamodb.conditions import Key
-from appClientes.app import crear_clientes, vencimientos_clientes,modificar_clientes, renovar_clientes, eliminar_clientes,buscar_clientes
+from appClientes.app import crear_clientes, vencimientos_clientes,modificar_clientes, renovar_clientes, eliminar_clientes,buscar_clientes,logica_de_pago
 from streamlit_option_menu import option_menu
 from appSiniestros.agreagar_siniestro import agregarSiniestro_st
 from appSiniestros.buscar_siniestro import  buscar_por_patente
@@ -37,13 +37,15 @@ def main_clientes():
     st.title("Gestor de clientes Ruben Rabbia seguros 📚")
     # Display Options for CRUD Operations
     titulo = st.sidebar.markdown("# Seleccionar operación 💻")
-    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️", "Buscar 🔎", "Modificar ✏️", "Renovar ♻️",
+    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️", "Logica de pago", "Buscar 🔎", "Modificar ✏️", "Renovar ♻️",
                                          "Eliminar ❌"))
 
     if option == "Crear 📝":
         crear_clientes()
     elif option == "Vencimientos ⚠️":
         vencimientos_clientes()
+    elif option == "Logica de pago":
+        logica_de_pago()
     elif option == "Buscar 🔎":
         buscar_clientes()
     elif option == "Modificar ✏️":
