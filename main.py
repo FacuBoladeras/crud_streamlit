@@ -32,14 +32,14 @@ def main_clientes():
     st.title("Gestor de clientes Ruben Rabbia seguros 📚")
     # Display Options for CRUD Operations
     titulo = st.sidebar.markdown("# Seleccionar operación 💻")
-    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️", "Logica de pago", "Buscar 🔎", "Modificar ✏️", "Renovar ♻️",
+    option = st.sidebar.selectbox("  ", ("Crear 📝", "Vencimientos ⚠️", "Logica de pago 💵", "Buscar 🔎", "Modificar ✏️", "Renovar ♻️",
                                          "Eliminar ❌"))
 
     if option == "Crear 📝":
         crear_clientes()
     elif option == "Vencimientos ⚠️":
         vencimientos_clientes()
-    elif option == "Logica de pago":
+    elif option == "Logica de pago 💵":
         logica_de_pago()
     elif option == "Buscar 🔎":
         buscar_clientes()

@@ -83,32 +83,33 @@ def vencimientos_clientes(mydb, mycursor):
     # Obtener la fecha actual
     today = datetime.date.today()
 
-    # Calcular las fechas de referencia para los dos rangos (0-7 días y 7-15 días)
-    range_0_7_days = today + datetime.timedelta(days=7)
-    range_7_15_days = today + datetime.timedelta(days=15)
-
-    # Consulta SQL para los registros con vencimiento_de_cuota dentro del rango actual a 7 días
-    sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s ORDER BY vencimiento_de_cuota ASC"
-    val_0_7_days = (compañia, today, range_0_7_days)
+    # Consulta SQL para los registros con vencimiento_de_cuota dentro del rango actual a 7 días y estado 'Sin pagar'
+    sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC"
+    val_0_7_days = (compañia, today, today + datetime.timedelta(days=7))
     mycursor.execute(sql_0_7_days, val_0_7_days)
     result_0_7_days = mycursor.fetchall()
 
-    # Consulta SQL para los registros con vencimiento_de_cuota dentro del rango 7 a 15 días
-    sql_7_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s ORDER BY vencimiento_de_cuota ASC"
-    val_7_15_days = (compañia, range_0_7_days, range_7_15_days)
+    # Consulta SQL para los registros con vencimiento_de_cuota dentro del rango 7 a 15 días y estado 'Sin pagar'
+    sql_7_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC"
+    val_7_15_days = (compañia, today + datetime.timedelta(days=7), today + datetime.timedelta(days=15))
     mycursor.execute(sql_7_15_days, val_7_15_days)
     result_7_15_days = mycursor.fetchall()
 
-    # Consulta SQL para los registros con vencimiento_de_cuota vencida
-    sql_expired = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota < %s ORDER BY vencimiento_de_cuota ASC LIMIT 20"
+    # Consulta SQL para los registros con vencimiento_de_cuota vencida y estado 'Sin pagar'
+    sql_expired = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota < %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC LIMIT 20"
     val_expired = (compañia, today)
     mycursor.execute(sql_expired, val_expired)
     result_expired = mycursor.fetchall()
     
-    # Consulta SQL para obtener los últimos 20 registros ingresados
-    sql_last_20 = "SELECT * FROM customers ORDER BY id DESC LIMIT 20"
-    mycursor.execute(sql_last_20)
-    result_last_20 = mycursor.fetchall()
+    # Consulta SQL para obtener los últimos 20 registros ingresados y estado 'Sin pagar'
+    sql_last_20_sin_pagar = "SELECT * FROM customers WHERE estado = 'Sin pagar' ORDER BY id DESC LIMIT 20"
+    mycursor.execute(sql_last_20_sin_pagar)
+    result_last_20_sin_pagar = mycursor.fetchall()
+
+    # Consulta SQL para obtener los últimos 20 registros ingresados y estado 'Pagado'
+    sql_last_20_pagado = "SELECT * FROM customers WHERE estado = 'Pagado' ORDER BY id DESC LIMIT 20"
+    mycursor.execute(sql_last_20_pagado)
+    result_last_20_pagado = mycursor.fetchall()
 
     # Definir las columnas para la tabla
     columnas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion", "Compañia", "Tipo de plan", "Tipo de facturacion", "Numero de cuota", "Vencimiento de cuota", "Estado"]
@@ -123,9 +124,14 @@ def vencimientos_clientes(mydb, mycursor):
     st.subheader("Cuotas vencidas")
     st.table(pd.DataFrame(result_expired, columns=columnas))
 
-    st.subheader("Últimos 20 usuarios ingresados")
-    st.table(pd.DataFrame(result_last_20, columns=columnas))
-    
+    st.subheader("Últimos 20 usuarios con estado 'Sin pagar'")
+    st.table(pd.DataFrame(result_last_20_sin_pagar, columns=columnas))
+
+    st.subheader("Últimos 20 pagados")
+    st.table(pd.DataFrame(result_last_20_pagado, columns=columnas))
+
+
+
 @manejar_conexion
 def logica_de_pago(mydb, mycursor):
     st.subheader("Buscar usuario por poliza🔎")
@@ -152,7 +158,7 @@ def logica_de_pago(mydb, mycursor):
             st.text(f"Estado de cuota: {result[10]}")
 
             # Botón para marcar como pagado
-            if st.button("Marcar como Pagado", key='marcar_pagado'):
+            if st.button("Marcar como Pagado", key='marcar_pagado',type="primary"):
                 # Consulta SQL para actualizar el estado a "Pagado"
                 update_sql = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
                 mycursor.execute(update_sql, (result[0],))  # result[0] es el id del usuario
