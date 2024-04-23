@@ -89,11 +89,11 @@ def vencimientos_clientes(mydb, mycursor):
     mycursor.execute(sql_0_7_days, val_0_7_days)
     result_0_7_days = mycursor.fetchall()
 
-    # Consulta SQL para los registros con vencimiento_de_cuota dentro del rango 7 a 15 días y estado 'Sin pagar'
-    sql_7_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC"
-    val_7_15_days = (compañia, today + datetime.timedelta(days=7), today + datetime.timedelta(days=15))
-    mycursor.execute(sql_7_15_days, val_7_15_days)
-    result_7_15_days = mycursor.fetchall()
+    # Consulta SQL para los registros con vencimiento_de_cuota dentro del rango 8 a 15 días y estado 'Sin pagar'
+    sql_8_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC"
+    val_8_15_days = (compañia, today + datetime.timedelta(days=8), today + datetime.timedelta(days=15))
+    mycursor.execute(sql_8_15_days, val_8_15_days)
+    result_8_15_days = mycursor.fetchall()
 
     # Consulta SQL para los registros con vencimiento_de_cuota vencida y estado 'Sin pagar'
     sql_expired = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota < %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC LIMIT 20"
@@ -118,17 +118,18 @@ def vencimientos_clientes(mydb, mycursor):
     st.subheader("Vencimiento en los próximos 7 días")
     st.table(pd.DataFrame(result_0_7_days, columns=columnas))
 
-    st.subheader("Vencimiento desde los 7 a los 15 días")
-    st.table(pd.DataFrame(result_7_15_days, columns=columnas))
-
-    st.subheader("Cuotas vencidas")
-    st.table(pd.DataFrame(result_expired, columns=columnas))
+    st.subheader("Vencimiento desde los 8 a los 15 días")
+    st.table(pd.DataFrame(result_8_15_days, columns=columnas))
 
     st.subheader("Últimos 20 usuarios ingresados")
     st.table(pd.DataFrame(result_last_20_sin_pagar, columns=columnas))
 
+    st.subheader("Cuotas vencidas")
+    st.table(pd.DataFrame(result_expired, columns=columnas))
+
     st.subheader("Últimos 20 pagados")
     st.table(pd.DataFrame(result_last_20_pagado, columns=columnas))
+
 
 
 
