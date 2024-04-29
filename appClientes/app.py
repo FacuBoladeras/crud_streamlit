@@ -102,12 +102,12 @@ def vencimientos_clientes(mydb, mycursor):
     result_expired = mycursor.fetchall()
     
     # Consulta SQL para obtener los últimos 20 registros ingresados y estado 'Sin pagar'
-    sql_last_20_sin_pagar = "SELECT * FROM customers WHERE estado = 'Sin pagar' ORDER BY id DESC LIMIT 20"
+    sql_last_20_sin_pagar = "SELECT * FROM customers WHERE estado = 'Sin pagar' ORDER BY id DESC LIMIT 10"
     mycursor.execute(sql_last_20_sin_pagar)
     result_last_20_sin_pagar = mycursor.fetchall()
 
     # Consulta SQL para obtener los últimos 20 registros ingresados y estado 'Pagado'
-    sql_last_20_pagado = "SELECT * FROM customers WHERE estado = 'Pagado' ORDER BY id DESC LIMIT 20"
+    sql_last_20_pagado = "SELECT * FROM customers WHERE estado = 'Pagado' ORDER BY id DESC LIMIT 10"
     mycursor.execute(sql_last_20_pagado)
     result_last_20_pagado = mycursor.fetchall()
 
@@ -121,13 +121,13 @@ def vencimientos_clientes(mydb, mycursor):
     st.subheader("Vencimiento desde los 8 a los 15 días")
     st.table(pd.DataFrame(result_8_15_days, columns=columnas))
 
-    st.subheader("Últimos 20 usuarios ingresados")
+    st.subheader("Últimos 10 usuarios ingresados")
     st.table(pd.DataFrame(result_last_20_sin_pagar, columns=columnas))
 
     st.subheader("Cuotas vencidas")
     st.table(pd.DataFrame(result_expired, columns=columnas))
 
-    st.subheader("Últimos 20 pagados")
+    st.subheader("Últimos 10 pagados")
     st.table(pd.DataFrame(result_last_20_pagado, columns=columnas))
 
 
@@ -298,7 +298,7 @@ def renovar_clientes(mydb, mycursor):
             numero_de_cuota = st.selectbox("Número de cuota", [0, 1, 2, 3, 4], index=[0, 1, 2, 3, 4].index(result[8]))
             vencimiento_de_cuota = st.date_input("Vencimiento de cuota", value=result[9])
 
-            if st.button("Modificar", type="primary"):
+            if st.button("Renovar", type="primary"):
                 # Crear una lista con los valores modificados
                 modified_values = list(result)
                 modified_values[8] = numero_de_cuota  # Índice de la columna 'numero_de_cuota'
