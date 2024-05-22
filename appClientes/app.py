@@ -177,7 +177,7 @@ def buscar_clientes(mydb, mycursor):
     option = st.selectbox(" ",("Por poliza 📝", "Por nombre 🧑"))
     if option == "Por poliza 📝":
     # Campo para ingresar el valor de la póliza a filtrar
-        poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
+        poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
 
         # Consulta SQL para buscar el registro con el valor de la póliza ingresado
         sql = "SELECT * FROM customers WHERE poliza = %s ORDER BY id DESC LIMIT 1"
