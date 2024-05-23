@@ -25,17 +25,6 @@ def manejar_conexion(func):
 
 
 
-#     #conexion remota railway
-# mydb = mysql.connector.connect(
-#     host="rabbia-db.c1o28sciaahh.us-east-1.rds.amazonaws.com",
-#     user="admin",
-#     port=3306,
-#     password="Soler839",
-#     database="rabbia"
-# )
-# mycursor=mydb.cursor(buffered=True)
-# print("Connection Established")
-
 @manejar_conexion
 def crear_clientes(mydb, mycursor):    
         st.subheader("Agregar usuario ✅")
@@ -138,7 +127,7 @@ def logica_de_pago(mydb, mycursor):
     st.subheader("Buscar usuario por póliza 🔎")
        
     # Campo para ingresar el valor de la póliza a filtrar
-    poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
+    poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
 
     # Consulta SQL para buscar los registros con el valor de la póliza ingresado
     sql = "SELECT * FROM customers WHERE poliza = %s"
@@ -224,7 +213,7 @@ def buscar_clientes(mydb, mycursor):
 def modificar_clientes(mydb, mycursor):    
     st.subheader("Buscar usuario 🔎")        
     # Campo para ingresar el valor de la póliza a filtrar
-    poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
+    poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
 
     # Consulta SQL para buscar el registro con el valor de la póliza ingresado
     sql = "SELECT * FROM customers WHERE poliza = %s"
@@ -269,7 +258,7 @@ def modificar_clientes(mydb, mycursor):
 def renovar_clientes(mydb, mycursor):
         st.subheader("Renovar cuota ♻️")        
         # Campo para ingresar el valor de la póliza a filtrar
-        poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar")
+        poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
 
         # Consulta SQL para buscar el último registro con el valor de la póliza ingresado
         sql = "SELECT * FROM customers WHERE poliza = %s ORDER BY id DESC LIMIT 1"
@@ -318,7 +307,7 @@ def eliminar_clientes(mydb, mycursor):
     st.subheader("Eliminar un registro ❌")
     
     # Campo para ingresar el valor de la póliza a borrar
-    poliza_value = st.text_input("Ingrese el valor de la póliza a borrar")
+    poliza_value = st.text_input("Ingrese el valor de la póliza a borrar").strip()
     
     # Consulta SQL para buscar los registros con el valor de la póliza ingresado
     sql = "SELECT * FROM customers WHERE poliza = %s"

@@ -1,16 +1,17 @@
 
 import mysql.connector
 import streamlit as st
+from passwords import HOST, PASS
 
 
 # Función para establecer la conexión con la base de datos
 def establecer_conexion():
     try:
         mydb = mysql.connector.connect(
-            host="rabbia-db.c1o28sciaahh.us-east-1.rds.amazonaws.com",
+            host=HOST,
             user="admin",
             port=3306,
-            password="Soler839",
+            password=PASS,
             database="rabbia"
         )
         mycursor = mydb.cursor(buffered=True)
