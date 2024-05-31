@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 import datetime
 from appClientes.app import crear_clientes, vencimientos_clientes,modificar_clientes, renovar_clientes, eliminar_clientes,buscar_clientes, logica_de_pago
-from appSiniestros.Siniestros import main_siniestros,buscar_por_patente,modificar_registro
+from appSiniestros.Siniestros import main_siniestros,buscar_por_patente,modificar_registro, mostrar_ultimos_20_registros
 from streamlit_option_menu import option_menu
 
 
@@ -53,11 +53,13 @@ def main_clientes():
 def main_siniestros2():
     st.title("Gestor de siniestros Ruben Rabbia seguros 🚗")
     titulo = st.sidebar.markdown("# Seleccionar operación 💻")
-    option = st.sidebar.selectbox("  ", ("Crear 📝", "Buscar por patente 🔎", "Modificar ✏️"))
+    option = st.sidebar.selectbox("  ", ("Crear 📝", "Buscar por patente 🔎","Ultimos ingresados 📅", "Modificar ✏️"))
     if option == "Crear 📝":
         main_siniestros()
     elif option == "Buscar por patente 🔎":
         buscar_por_patente()
+    elif option == "Ultimos ingresados 📅":
+        mostrar_ultimos_20_registros()
     elif option == "Modificar ✏️":
         modificar_registro()
 

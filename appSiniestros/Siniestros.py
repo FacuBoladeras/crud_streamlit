@@ -1,5 +1,4 @@
 import boto3
-import uuid
 import streamlit as st
 import pandas as pd
 from boto3.dynamodb.conditions import Key
@@ -9,19 +8,17 @@ from boto3.dynamodb.conditions import Key
 def insertar_siniestro(nombre, contacto, compañia, patente, descripcion, fecha_de_siniestro, fecha_de_denuncia):
     try:
         # Configuración de la conexión con DynamoDB
-        dynamodb = boto3.resource('dynamodb', region_name='us-east-1')  # Cambia la región según tu configuración
-        table = dynamodb.Table('siniestros-rabbia')  # Reemplaza 'Nombre_de_tu_tabla' por el nombre de tu tabla en DynamoDB
+        dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+        table = dynamodb.Table('siniestros-rabbia')
 
         # Convertir las fechas a strings
         fecha_de_siniestro_str = fecha_de_siniestro.strftime("%Y-%m-%d")
         fecha_de_denuncia_str = fecha_de_denuncia.strftime("%Y-%m-%d")
 
-        # Generar un ID único para la clave de ordenación (sort key)
-        
         # Insertar los datos en la tabla de DynamoDB
         table.put_item(
             Item={
-                'Patente': patente,# Clave de partición
+                'Patente': patente,  # Clave de partición
                 'Nombre': nombre,
                 'Contacto': contacto,
                 'Compañia': compañia,
@@ -31,13 +28,12 @@ def insertar_siniestro(nombre, contacto, compañia, patente, descripcion, fecha_
             }
         )
 
-        # Mostrar mensaje de éxito
         st.success("Datos insertados correctamente ✅")
     except Exception as e:
-        # Mostrar mensaje de error en caso de que ocurra una excepción
         st.error(f"Error al insertar datos en DynamoDB: {e}")
 
-# Interfaz de usuario para ingresar datos y llamar a la función insert
+
+# Interfaz de usuario para ingresar datos y llamar a la función insertar
 def main_siniestros():
     st.subheader("Agregar datos de siniestro 📝")
 
@@ -55,9 +51,9 @@ def main_siniestros():
         insertar_siniestro(nombre, contacto, compañia, patente, descripcion, fecha_de_siniestro, fecha_de_denuncia)
 
 
-# Función para obtener todos los registros de la tabla de DynamoDB ordenados por fecha de siniestro
+# Función para obtener registros por patente
 def obtener_registros_por_patente(patente):
-    dynamodb = boto3.resource('dynamodb',region_name='us-east-1')
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
     table = dynamodb.Table('siniestros-rabbia')
 
     # Realizar una consulta utilizando la clave de partición (patente) y ordenando por fecha de siniestro
@@ -70,12 +66,12 @@ def obtener_registros_por_patente(patente):
 
 
 def buscar_por_patente():
-    st.subheader("Buscar siniestro por patente 🔎")    
+    st.subheader("Buscar siniestro por patente 🔎")
 
     patente = st.text_input("Ingrese la patente para ver los siniestros: ")
 
     if st.button("Buscar", type="primary"):
-        if patente:        
+        if patente:
             # Obtener registros por patente
             data = obtener_registros_por_patente(patente)
             st.subheader("Detalles del siniestro 🧾")
@@ -90,8 +86,24 @@ def buscar_por_patente():
                 st.write("------------------")
         else:
             st.warning("Ingrese una patente para buscar siniestros.")
+            
+def mostrar_ultimos_20_registros():
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    table = dynamodb.Table('siniestros-rabbia')
 
+    # Escanear todos los datos de la tabla
+    response = table.scan()
+    items = response['Items']
 
+    # Convertir los datos a un DataFrame de pandas
+    df = pd.DataFrame(items)
+
+    # Ordenar el DataFrame por la fecha de inserción y seleccionar los últimos 20 registros
+    df_sorted = df.sort_values(by='FechaSiniestro', ascending=False).head(20)
+
+    # Mostrar el DataFrame en Streamlit
+    st.subheader("Últimos 20 registros agregados")
+    st.dataframe(df_sorted)
 
 # Función para actualizar un registro
 def actualizar_registro(patente, nuevo_nombre, nuevo_contacto, nueva_compania, nueva_descripcion, nueva_fecha_siniestro, nueva_fecha_denuncia):
@@ -123,39 +135,35 @@ def actualizar_registro(patente, nuevo_nombre, nuevo_contacto, nueva_compania, n
     table.put_item(Item=registro_actualizado)
     st.success("Registro actualizado correctamente.")
 
+
 # Función para modificar un registro filtrado por patente
 def modificar_registro():
     st.subheader("Modificar registro por patente")
 
     patente = st.text_input("Ingrese la patente del registro que desea modificar:")
-    
+
     if patente:
-            # Obtener el registro por patente
-            registro = obtener_registros_por_patente(patente)
-            if not registro:
-                st.warning("No se encontraron registros para la patente proporcionada.")
-                return
+        # Obtener el registro por patente
+        registro = obtener_registros_por_patente(patente)
+        if not registro:
+            st.warning("No se encontraron registros para la patente proporcionada.")
+            return
 
-            # Mostrar los detalles del registro en un formulario de Streamlit
-            st.subheader("Detalles del registro:")
-            st.write("Nombre:", registro[0]['Nombre'])
-            st.write("Contacto:", registro[0]['Contacto'])
-            st.write("Compañia:", registro[0]['Compañia'])
-            st.write("Descripción:", registro[0]['Descripcion'])
-            st.write("Fecha de siniestro:", registro[0]['FechaSiniestro'])
-            st.write("Fecha de denuncia:", registro[0]['FechaDenuncia'])
+        registro = registro[0]  # Tomamos el primer registro de la lista
 
-            st.subheader("Modificar registro:")
-            nuevo_nombre = st.text_input("Nuevo nombre:")
-            nuevo_contacto = st.text_input("Nuevo contacto:")
-            nueva_compania = st.selectbox("Nueva compañía", ["RUS", "RIVADAVIA", "COOP"])
-            nueva_descripcion = st.text_area("Nueva descripción:")
-            nueva_fecha_siniestro = st.date_input("Nueva fecha de siniestro")
-            nueva_fecha_denuncia = st.date_input("Nueva fecha de denuncia")
+        # Mostrar los detalles del registro en un formulario de Streamlit
+        st.subheader("Detalles del registro:")
+        nuevo_nombre = st.text_input("Nuevo nombre:", value=registro['Nombre'])
+        nuevo_contacto = st.text_input("Nuevo contacto:", value=registro['Contacto'])
+        nueva_compania = st.selectbox("Nueva compañía", ["RUS", "RIVADAVIA", "COOP"], index=["RUS", "RIVADAVIA", "COOP"].index(registro['Compañia']))
+        nueva_descripcion = st.text_area("Nueva descripción:", value=registro['Descripcion'])
+        nueva_fecha_siniestro = st.date_input("Nueva fecha de siniestro", value=pd.to_datetime(registro['FechaSiniestro']))
+        nueva_fecha_denuncia = st.date_input("Nueva fecha de denuncia", value=pd.to_datetime(registro['FechaDenuncia']))
 
-            # Botón para actualizar el registro
-            if st.button("Actualizar registro", type="primary"):
-                actualizar_registro(patente, nuevo_nombre, nuevo_contacto, nueva_compania, nueva_descripcion, nueva_fecha_siniestro, nueva_fecha_denuncia)
+        # Botón para actualizar el registro
+        if st.button("Actualizar registro", type="primary"):
+            actualizar_registro(patente, nuevo_nombre, nuevo_contacto, nueva_compania, nueva_descripcion, nueva_fecha_siniestro, nueva_fecha_denuncia)
+
 
 if __name__ == "__main__":
     main_siniestros()
