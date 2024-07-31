@@ -4,6 +4,8 @@ from functools import wraps
 import streamlit as st
 import datetime
 from appClientes.conexion import establecer_conexion, cerrar_conexion
+from urllib.parse import quote
+
 
 
 
@@ -24,151 +26,137 @@ def manejar_conexion(func):
     return wrapper
 
 
-
 @manejar_conexion
 def crear_clientes(mydb, mycursor):    
-        st.subheader("Agregar usuario ✅")
-        name = st.text_input("Nombre")
-        contacto = st.text_input("Contacto")
-        poliza = st.text_input("Poliza")
-        descripcion = st.text_input("Descripción")
-        compañia = st.selectbox("Compañia", ["RIVADAVIA","RUS","COOP"])
-        tipo_de_plan = st.selectbox("Duración del plan", ["Anual","Semestral"])
-        tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral","Anual"])
-        numero_de_cuota = st.selectbox("Numero de cuota", [0,1,2,3,4])
-        vencimiento_de_cuota = st.date_input("Vencimiento de la cuota")
-        estado = st.selectbox("Estado de la cuota", ["Sin pagar","Pagado"])
-        
+    st.subheader("Agregar usuario ✅")
+    name = st.text_input("Nombre")
+    contacto = st.text_input("Contacto")
+    poliza = st.text_input("Poliza")
+    descripcion = st.text_input("Descripción")
+    compañia = st.selectbox("Compañia", ["RIVADAVIA", "RUS", "COOP"])
+    tipo_de_plan = st.selectbox("Duración del plan", ["Anual", "Semestral"])
+    tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral", "Anual"])
+    numero_de_cuota = st.selectbox("Numero de cuota", [0, 1, 2, 3, 4])
+    vencimiento_de_cuota = st.date_input("Vencimiento de la cuota")
+    estado = st.selectbox("Estado de la cuota", ["Sin pagar", "Pagado", "Avisado"])
 
-        if st.button("Crear", type="primary"):  # Clave única para el botón Crear usuario
-            if name and contacto and poliza:
-                # Consultar si la póliza ya existe en la base de datos
-                sql_check_poliza = "SELECT * FROM customers WHERE poliza = %s"
-                val_check_poliza = (poliza,)
-                mycursor.execute(sql_check_poliza, val_check_poliza)
-                existing_poliza = mycursor.fetchone()
+    if st.button("Crear", type="primary"):
+        if name and contacto and poliza:
+            sql_check_poliza = "SELECT * FROM customers WHERE poliza = %s"
+            val_check_poliza = (poliza,)
+            mycursor.execute(sql_check_poliza, val_check_poliza)
+            existing_poliza = mycursor.fetchone()
 
-                if existing_poliza:
-                    st.warning("La póliza ingresada ya existe. Por favor, ingresa una póliza diferente.")
-                else:
-                    try:
-                        sql = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan,tipo_de_facturacion,numero_de_cuota,vencimiento_de_cuota,estado) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s,%s)"
-                        val = (name, contacto, poliza, descripcion, compañia, tipo_de_plan,tipo_de_facturacion,numero_de_cuota,vencimiento_de_cuota,estado)
-                        mycursor.execute(sql, val)
-                        mydb.commit()
-                        st.success("Creado exitosamente ✅")
-                    except Exception as e:
-                        st.error(f"Error al crear el usuario: {e}")
+            if existing_poliza:
+                st.warning("La póliza ingresada ya existe. Por favor, ingresa una póliza diferente.")
             else:
-                st.warning("Por favor completa todos los campos antes de continuar.")
+                try:
+                    sql = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, numero_de_cuota, vencimiento_de_cuota, estado) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                    val = (name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, numero_de_cuota, vencimiento_de_cuota, estado)
+                    mycursor.execute(sql, val)
+                    mydb.commit()
+                    st.success("Creado exitosamente ✅")
+                except Exception as e:
+                    st.error(f"Error al crear el usuario: {e}")
+        else:
+            st.warning("Por favor completa todos los campos antes de continuar.")
 
 @manejar_conexion
 def vencimientos_clientes(mydb, mycursor):
-    # Compañia seleccionada
     st.subheader("Vencimientos de cuotas 📜")
-    
     compañia = st.selectbox("Seleccionar compañia", ["RIVADAVIA", "RUS", "COOP"])
 
-    # Obtener la fecha actual
     today = datetime.date.today()
 
-    # Consulta SQL para los registros con vencimiento_de_cuota dentro del rango actual a 7 días y estado 'Sin pagar'
     sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC"
     val_0_7_days = (compañia, today, today + datetime.timedelta(days=7))
     mycursor.execute(sql_0_7_days, val_0_7_days)
     result_0_7_days = mycursor.fetchall()
 
-    # Consulta SQL para los registros con vencimiento_de_cuota dentro del rango 8 a 15 días y estado 'Sin pagar'
     sql_8_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC"
     val_8_15_days = (compañia, today + datetime.timedelta(days=8), today + datetime.timedelta(days=15))
     mycursor.execute(sql_8_15_days, val_8_15_days)
     result_8_15_days = mycursor.fetchall()
 
-    # Consulta SQL para los registros con vencimiento_de_cuota vencida y estado 'Sin pagar'
     sql_expired = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota < %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC LIMIT 20"
     val_expired = (compañia, today)
     mycursor.execute(sql_expired, val_expired)
     result_expired = mycursor.fetchall()
-    
-    # Consulta SQL para obtener los últimos 20 registros ingresados y estado 'Sin pagar'
+
     sql_last_20_sin_pagar = "SELECT * FROM customers WHERE estado = 'Sin pagar' ORDER BY id DESC LIMIT 10"
     mycursor.execute(sql_last_20_sin_pagar)
     result_last_20_sin_pagar = mycursor.fetchall()
 
-    # Consulta SQL para obtener los últimos 20 registros ingresados y estado 'Pagado'
     sql_last_20_pagado = "SELECT * FROM customers WHERE estado = 'Pagado' ORDER BY id DESC LIMIT 10"
     mycursor.execute(sql_last_20_pagado)
     result_last_20_pagado = mycursor.fetchall()
 
-    # Definir las columnas para la tabla
+    sql_last_20_avisado = "SELECT * FROM customers WHERE estado = 'Avisado' ORDER BY id DESC LIMIT 10"
+    mycursor.execute(sql_last_20_avisado)
+    result_last_20_avisado = mycursor.fetchall()
+
     columnas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion", "Compañia", "Tipo de plan", "Tipo de facturacion", "Numero de cuota", "Vencimiento de cuota", "Estado"]
 
-    # Mostrar los resultados en Streamlit como tablas
-    st.subheader("Vencimiento en los próximos 7 días")
-    st.table(pd.DataFrame(result_0_7_days, columns=columnas))
+    def mostrar_tabla(resultados, titulo, mostrar_checkbox=False):
+        st.subheader(titulo)
+        
+        for row in resultados:
+            with st.expander(f"Usuario: {row[1]} - Póliza: {row[3]}"):
+                st.text(f"Nombre: {row[1]}")
+                st.text(f"Contacto: {row[2]}")
+                st.text(f"Póliza: {row[3]}")
+                st.text(f"Descripcion: {row[4]}")
+                st.text(f"Compañia: {row[5]}")
+                st.text(f"Tipo de plan: {row[6]}")
+                st.text(f"Tipo de facturacion: {row[7]}")
+                st.text(f"Numero de cuota: {row[8]}")
+                st.text(f"Vencimiento de cuota: {row[9]}")
+                st.text(f"Estado: {row[10]}")
+                
+                if mostrar_checkbox and row[10] == 'Sin pagar':
+                    # Genera claves únicas para los checkboxes
+                    unique_key_avisado = f"avisado_checkbox_{row[0]}"
+                    unique_key_pagado = f"pagado_checkbox_{row[0]}"
+                    
+                    avisado = st.checkbox("Marcar como Avisado", key=unique_key_avisado)
+                    pagado = st.checkbox("Marcar como Pagado", key=unique_key_pagado)
+                    
+                    if avisado:
+                        try:
+                            sql_update = "UPDATE customers SET estado = 'Avisado' WHERE id = %s"
+                            mycursor.execute(sql_update, (row[0],))
+                            mydb.commit()
+                            st.success("Estado actualizado a Avisado")
+                        except Exception as e:
+                            st.error(f"Error al actualizar el estado: {e}")
+                    
+                    if pagado:
+                        try:
+                            sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
+                            mycursor.execute(sql_update, (row[0],))
+                            mydb.commit()
+                            st.success("Estado actualizado a Pagado")
+                        except Exception as e:
+                            st.error(f"Error al actualizar el estado: {e}")
 
-    st.subheader("Vencimiento desde los 8 a los 15 días")
-    st.table(pd.DataFrame(result_8_15_days, columns=columnas))
 
-    st.subheader("Últimos 10 usuarios ingresados")
-    st.table(pd.DataFrame(result_last_20_sin_pagar, columns=columnas))
-
-    st.subheader("Cuotas vencidas")
-    st.table(pd.DataFrame(result_expired, columns=columnas))
-
-    st.subheader("Últimos 10 pagados")
-    st.table(pd.DataFrame(result_last_20_pagado, columns=columnas))
-
-
-
-
-@manejar_conexion
-def logica_de_pago(mydb, mycursor):
-    st.subheader("Buscar usuario por póliza 🔎")
-       
-    # Campo para ingresar el valor de la póliza a filtrar
-    poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
-
-    # Consulta SQL para buscar los registros con el valor de la póliza ingresado
-    sql = "SELECT * FROM customers WHERE poliza = %s"
-    val = (poliza_value,)
-    mycursor.execute(sql, val)
-    results = mycursor.fetchall()
-
-    if results:
-        for result in results:
-            st.text(f"ID: {result[0]}")
-            st.text(f"Nombre actual: {result[1]}")
-            st.text(f"Contacto actual: {result[2]}")
-            st.text(f"Póliza actual: {result[3]}")
-            st.text(f"Descripción actual: {result[4]}")
-            st.text(f"Compañía actual: {result[5]}")
-            st.text(f"Tipo de plan actual: {result[6]}")
-            st.text(f"Tipo de facturación: {result[7]}")
-            st.text(f"Número de cuota: {result[8]}")
-            st.text(f"Vencimiento de cuota: {result[9]}")
-            st.text(f"Estado de cuota: {result[10]}")
-
-            # Botón para marcar como Pagado para el registro actual
-            if st.button(f"Marcar como Pagado (Vencimiento: {result[9]})", key=f'marcar_pagado_{result[0]}', type="primary"):
-                # Consulta SQL para actualizar el estado a "Pagado" solo para este registro
-                update_sql = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
-                mycursor.execute(update_sql, (result[0],))  # result[0] es el id del registro
-                mydb.commit()  # Confirmar la transacción
-
-                st.success(f"Estado actualizado con éxito para el vencimiento.")
-
+    mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días", mostrar_checkbox=True)
+    mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días", mostrar_checkbox=True)
+    mostrar_tabla(result_expired, "Cuotas vencidas", mostrar_checkbox=True)
+    mostrar_tabla(result_last_20_sin_pagar, "Últimos 10 usuarios ingresados", mostrar_checkbox=True)
+    mostrar_tabla(result_last_20_pagado, "Últimos 10 pagados")
+    mostrar_tabla(result_last_20_avisado, "Últimos 10 avisados")
+    
+    
 
 @manejar_conexion
 def buscar_clientes(mydb, mycursor):
-    
     st.subheader("Buscar usuario 🔎")
-    option = st.selectbox(" ",("Por poliza 📝", "Por nombre 🧑"))
+    option = st.selectbox(" ", ("Por poliza 📝", "Por nombre 🧑"))
+    
     if option == "Por poliza 📝":
-    # Campo para ingresar el valor de la póliza a filtrar
         poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
-
-        # Consulta SQL para buscar el registro con el valor de la póliza ingresado
+        
         sql = "SELECT * FROM customers WHERE poliza = %s ORDER BY id DESC LIMIT 1"
         val = (poliza_value,)
         mycursor.execute(sql, val)
@@ -181,78 +169,124 @@ def buscar_clientes(mydb, mycursor):
             st.text(f"Descripcion actual: {result[4]}")
             st.text(f"Compañia actual: {result[5]}")
             st.text(f"Tipo de plan actual: {result[6]}")
-            st.text(f"Tipo de facturacion: {result[7]}")
+            st.text(f"Tipo de facturacion actual: {result[7]}")
             st.text(f"Numero de cuota: {result[8]}")
             st.text(f"Vencimiento de cuota: {result[9]}")
             st.text(f"Estado de cuota: {result[10]}")
+
             
     elif option == "Por nombre 🧑":
+        nombre_value = st.text_input("Ingrese el nombre a filtrar").strip()
         
-        nombre_value = st.text_input("Ingrese el nombre a filtrar")
-
-        # Consulta SQL para buscar el registro con el valor de la póliza ingresado
         sql = "SELECT * FROM customers WHERE name = %s ORDER BY id DESC LIMIT 1"
         val = (nombre_value,)
         mycursor.execute(sql, val)
         result = mycursor.fetchone()
         
         if result:
-            
             st.text(f"Nombre actual: {result[1]}")
             st.text(f"Contacto actual: {result[2]}")
             st.text(f"Póliza actual: {result[3]}")
             st.text(f"Descripcion actual: {result[4]}")
             st.text(f"Compañia actual: {result[5]}")
             st.text(f"Tipo de plan actual: {result[6]}")
-            st.text(f"Tipo de facturacion: {result[7]}")
+            st.text(f"Tipo de facturacion actual: {result[7]}")
+            st.text(f"Numero de cuota: {result[8]}")
+            st.text(f"Vencimiento de cuota: {result[9]}")
+            st.text(f"Estado de cuota: {result[10]}")
+
+
+            
+@manejar_conexion
+def modificar_clientes(mydb, mycursor):    
+    st.subheader("Buscar y modificar usuario 🔎")
+
+    # Seleccionar el criterio de búsqueda
+    option = st.selectbox("Buscar por:", ["Por poliza 📝", "Por nombre 🧑"])
+    
+    if option == "Por poliza 📝":
+        poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
+
+        sql = "SELECT * FROM customers WHERE poliza = %s"
+        val = (poliza_value,)
+        mycursor.execute(sql, val)
+        result = mycursor.fetchone()                 
+                    
+        if result:
+            st.text(f"Nombre actual: {result[1]}")
+            st.text(f"Contacto actual: {result[2]}")
+            st.text(f"Póliza actual: {result[3]}")
+            st.text(f"Descripcion actual: {result[4]}")
+            st.text(f"Compañia actual: {result[5]}")
+            st.text(f"Tipo de plan actual: {result[6]}")
+            st.text(f"Tipo de facturacion actual: {result[7]}")
             st.text(f"Numero de cuota: {result[8]}")
             st.text(f"Vencimiento de cuota: {result[9]}")
             st.text(f"Estado de cuota: {result[10]}")
             
-@manejar_conexion           
-def modificar_clientes(mydb, mycursor):    
-    st.subheader("Buscar usuario 🔎")        
-    # Campo para ingresar el valor de la póliza a filtrar
-    poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
+            st.subheader("Modificar usuario ✏️")
+            name = st.text_input("Nombre", value=result[1])
+            contacto = st.text_input("Contacto", value=result[2])
+            poliza = st.text_input("Poliza", value=result[3])
+            descripcion = st.text_input("Descripción", value=result[4])
+            compañia = st.selectbox("Compañia", ["RIVADAVIA", "RUS", "COOP"], index=["RIVADAVIA", "RUS", "COOP"].index(result[5]))
+            tipo_de_plan = st.selectbox("Tipo de plan", ["Anual", "Semestral"], index=["Anual", "Semestral"].index(result[6]))
+            tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral", "Anual"], index=["Trimestral", "Cuatrimestral", "Semestral", "Anual"].index(result[7]))
+            numero_de_cuota = st.selectbox("Numero de cuota", [0, 1, 2, 3, 4], index=[0, 1, 2, 3, 4].index(result[8]))
+            vencimiento_de_cuota = st.date_input("Vencimiento de cuota", value=result[9])
 
-    # Consulta SQL para buscar el registro con el valor de la póliza ingresado
-    sql = "SELECT * FROM customers WHERE poliza = %s"
-    val = (poliza_value,)
-    mycursor.execute(sql, val)
-    result = mycursor.fetchone()                 
-                    
-    # Si se encuentra un registro coincidente, mostrar los datos actuales
-    if result:
-        st.text(f"Nombre actual: {result[1]}")
-        st.text(f"Contacto actual: {result[2]}")
-        st.text(f"Póliza actual: {result[3]}")
-        st.text(f"Descripcion actual: {result[4]}")
-        st.text(f"Compañia actual: {result[5]}")
-        st.text(f"Tipo de plan actual: {result[6]}")
-        st.text(f"Tipo de facturacion: {result[7]}")
-        st.text(f"Numero de cuota: {result[8]}")
-        st.text(f"Vencimiento de cuota: {result[9]}")
-        st.text(f"Estado de cuota: {result[10]}")
+            if st.button("Modificar", type="primary"):
+                sql_update = "UPDATE customers SET name=%s, contacto=%s, poliza=%s, descripcion=%s, compañia=%s, tipo_de_plan=%s, tipo_de_facturacion=%s, numero_de_cuota=%s, vencimiento_de_cuota=%s WHERE poliza = %s"
+                val_update = (name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, numero_de_cuota, vencimiento_de_cuota, poliza_value)
+                try:
+                    mycursor.execute(sql_update, val_update)
+                    mydb.commit()
+                    st.success("Registro actualizado correctamente ✅")
+                except Exception as e:
+                    st.error(f"Error al actualizar el registro: {e}")
+
+    elif option == "Por nombre 🧑":
+        nombre_value = st.text_input("Ingrese el nombre a filtrar").strip()
         
-        st.subheader("Modificar usuario ✏️")
-        # Campos para ingresar los nuevos valores
-        name = st.text_input("Nombre", value=result[1])
-        contacto = st.text_input("Contacto", value=result[2])
-        poliza = st.text_input("Poliza", value=result[3])
-        descripcion = st.text_input("Descripción", value=result[4])
-        compañia = st.selectbox("Compañia", ["RIVADAVIA", "RUS", "COOP"], index=[ "RIVADAVIA", "RUS", "COOP"].index(result[5]))
-        tipo_de_plan = st.selectbox("Tipo de plan", [ "Anual","Semestral" ], index=["Anual","Semestral"].index(result[6]))
-        tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral","Anual"],index=["Trimestral", "Cuatrimestral", "Semestral", "Anual"].index(result[7]))
-        numero_de_cuota = st.selectbox("Numero de cuota", [0,1,2,3,4],index=[0,1,2,3,4].index(result[8]))
-        vencimiento_de_cuota = st.date_input("Vencimeinto de cuota", value=result[9])
+        sql = "SELECT * FROM customers WHERE name = %s"
+        val = (nombre_value,)
+        mycursor.execute(sql, val)
+        result = mycursor.fetchone()
+        
+        if result:
+            st.text(f"Nombre actual: {result[1]}")
+            st.text(f"Contacto actual: {result[2]}")
+            st.text(f"Póliza actual: {result[3]}")
+            st.text(f"Descripción actual: {result[4]}")
+            st.text(f"Compañia actual: {result[5]}")
+            st.text(f"Tipo de plan actual: {result[6]}")
+            st.text(f"Tipo de facturacion actual: {result[7]}")
+            st.text(f"Numero de cuota: {result[8]}")
+            st.text(f"Vencimiento de cuota: {result[9]}")
+            st.text(f"Estado de cuota: {result[10]}")
+            
+            st.subheader("Modificar usuario ✏️")
+            name = st.text_input("Nombre", value=result[1])
+            contacto = st.text_input("Contacto", value=result[2])
+            poliza = st.text_input("Poliza", value=result[3])
+            descripcion = st.text_input("Descripción", value=result[4])
+            compañia = st.selectbox("Compañia", ["RIVADAVIA", "RUS", "COOP"], index=["RIVADAVIA", "RUS", "COOP"].index(result[5]))
+            tipo_de_plan = st.selectbox("Tipo de plan", ["Anual", "Semestral"], index=["Anual", "Semestral"].index(result[6]))
+            tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral", "Cuatrimestral", "Semestral", "Anual"], index=["Trimestral", "Cuatrimestral", "Semestral", "Anual"].index(result[7]))
+            numero_de_cuota = st.selectbox("Numero de cuota", [0, 1, 2, 3, 4], index=[0, 1, 2, 3, 4].index(result[8]))
+            vencimiento_de_cuota = st.date_input("Vencimiento de cuota", value=result[9])
 
-        if st.button("Modificar", type="primary"):
-            # Actualizar el registro en la base de datos
-            sql_update = "UPDATE customers SET name=%s, contacto=%s, poliza=%s,descripcion=%s, compañia=%s, tipo_de_plan=%s,tipo_de_facturacion=%s,numero_de_cuota=%s,vencimiento_de_cuota=%s WHERE poliza = %s"
-            val_update = (name, contacto, poliza,descripcion, compañia, tipo_de_plan,tipo_de_facturacion,numero_de_cuota,vencimiento_de_cuota,poliza_value)
-            mycursor.execute(sql_update, val_update)
-            mydb.commit()
-            st.success("Registro actualizado correctamente ✅")
+            if st.button("Modificar", type="primary"):
+                sql_update = "UPDATE customers SET name=%s, contacto=%s, poliza=%s, descripcion=%s, compañia=%s, tipo_de_plan=%s, tipo_de_facturacion=%s, numero_de_cuota=%s, vencimiento_de_cuota=%s WHERE name = %s"
+                val_update = (name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, numero_de_cuota, vencimiento_de_cuota, nombre_value)
+                try:
+                    mycursor.execute(sql_update, val_update)
+                    mydb.commit()
+                    st.success("Registro actualizado correctamente ✅")
+                except Exception as e:
+                    st.error(f"Error al actualizar el registro: {e}")
+
+
 
 @manejar_conexion
 def renovar_clientes(mydb, mycursor):
