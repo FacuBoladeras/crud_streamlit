@@ -68,12 +68,12 @@ def vencimientos_clientes(mydb, mycursor):
 
     today = datetime.date.today()
 
-    sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC"
+    sql_0_7_days ="SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar', 'Avisado') ORDER BY vencimiento_de_cuota ASC"
     val_0_7_days = (compañia, today, today + datetime.timedelta(days=7))
     mycursor.execute(sql_0_7_days, val_0_7_days)
     result_0_7_days = mycursor.fetchall()
 
-    sql_8_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC"
+    sql_8_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar', 'Avisado') ORDER BY vencimiento_de_cuota ASC"
     val_8_15_days = (compañia, today + datetime.timedelta(days=8), today + datetime.timedelta(days=15))
     mycursor.execute(sql_8_15_days, val_8_15_days)
     result_8_15_days = mycursor.fetchall()
@@ -99,7 +99,6 @@ def vencimientos_clientes(mydb, mycursor):
 
     def mostrar_tabla(resultados, titulo, mostrar_checkbox=False):
         st.subheader(titulo)
-        
         for row in resultados:
             with st.expander(f"Usuario: {row[1]} - Póliza: {row[3]}"):
                 st.text(f"Nombre: {row[1]}")
@@ -112,32 +111,33 @@ def vencimientos_clientes(mydb, mycursor):
                 st.text(f"Numero de cuota: {row[8]}")
                 st.text(f"Vencimiento de cuota: {row[9]}")
                 st.text(f"Estado: {row[10]}")
-                
-                if mostrar_checkbox and row[10] == 'Sin pagar':
-                    # Genera claves únicas para los checkboxes
-                    unique_key_avisado = f"avisado_checkbox_{row[0]}"
-                    unique_key_pagado = f"pagado_checkbox_{row[0]}"
-                    
-                    avisado = st.checkbox("Marcar como Avisado", key=unique_key_avisado)
-                    pagado = st.checkbox("Marcar como Pagado", key=unique_key_pagado)
-                    
-                    if avisado:
-                        try:
-                            sql_update = "UPDATE customers SET estado = 'Avisado' WHERE id = %s"
-                            mycursor.execute(sql_update, (row[0],))
-                            mydb.commit()
-                            st.success("Estado actualizado a Avisado")
-                        except Exception as e:
-                            st.error(f"Error al actualizar el estado: {e}")
-                    
-                    if pagado:
-                        try:
-                            sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
-                            mycursor.execute(sql_update, (row[0],))
-                            mydb.commit()
-                            st.success("Estado actualizado a Pagado")
-                        except Exception as e:
-                            st.error(f"Error al actualizar el estado: {e}")
+
+                if mostrar_checkbox:
+                    if row[10] == 'Sin pagar':
+                        # Checkbox para marcar como Avisado
+                        avisado = st.checkbox("Marcar como Avisado", key=f"avisado_checkbox_{row[0]}")
+                        if avisado:
+                            try:
+                                # Actualizar a Avisado
+                                sql_update = "UPDATE customers SET estado = 'Avisado' WHERE id = %s"
+                                mycursor.execute(sql_update, (row[0],))
+                                mydb.commit()
+                                st.success("Estado actualizado a Avisado")
+                            except Exception as e:
+                                st.error(f"Error al actualizar el estado: {e}")
+
+                    elif row[10] == 'Avisado':
+                        # Checkbox para marcar como Pagado
+                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}")
+                        if pagado:
+                            try:
+                                # Actualizar a Pagado
+                                sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
+                                mycursor.execute(sql_update, (row[0],))
+                                mydb.commit()
+                                st.success("Estado actualizado a Pagado")
+                            except Exception as e:
+                                st.error(f"Error al actualizar el estado: {e}")
 
 
     mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días", mostrar_checkbox=True)
