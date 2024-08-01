@@ -116,6 +116,7 @@ def vencimientos_clientes(mydb, mycursor):
                     if row[10] == 'Sin pagar':
                         # Checkbox para marcar como Avisado
                         avisado = st.checkbox("Marcar como Avisado", key=f"avisado_checkbox_{row[0]}")
+                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}")
                         if avisado:
                             try:
                                 # Actualizar a Avisado
@@ -123,6 +124,16 @@ def vencimientos_clientes(mydb, mycursor):
                                 mycursor.execute(sql_update, (row[0],))
                                 mydb.commit()
                                 st.success("Estado actualizado a Avisado")
+                            except Exception as e:
+                                st.error(f"Error al actualizar el estado: {e}")
+                                
+                        elif pagado:
+                            try:
+                                # Actualizar a Pagado
+                                sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
+                                mycursor.execute(sql_update, (row[0],))
+                                mydb.commit()
+                                st.success("Estado actualizado a Pagado")
                             except Exception as e:
                                 st.error(f"Error al actualizar el estado: {e}")
 
