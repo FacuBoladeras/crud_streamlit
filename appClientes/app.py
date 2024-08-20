@@ -97,7 +97,7 @@ def vencimientos_clientes(mydb, mycursor):
 
     columnas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion", "Compañia", "Tipo de plan", "Tipo de facturacion", "Numero de cuota", "Vencimiento de cuota", "Estado"]
 
-    def mostrar_tabla(resultados, titulo, mostrar_checkbox=False):
+    def mostrar_tabla(resultados, titulo, mostrar_checkbox=False, section=""):
         st.subheader(titulo)
         for row in resultados:
             with st.expander(f"Usuario: {row[1]} - Póliza: {row[3]}"):
@@ -114,22 +114,18 @@ def vencimientos_clientes(mydb, mycursor):
 
                 if mostrar_checkbox:
                     if row[10] == 'Sin pagar':
-                        # Checkbox para marcar como Avisado
-                        avisado = st.checkbox("Marcar como Avisado", key=f"avisado_checkbox_{row[0]}")
-                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}")
+                        avisado = st.checkbox("Marcar como Avisado", key=f"avisado_checkbox_{row[0]}_{section}")
+                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}_{section}")
                         if avisado:
                             try:
-                                # Actualizar a Avisado
                                 sql_update = "UPDATE customers SET estado = 'Avisado' WHERE id = %s"
                                 mycursor.execute(sql_update, (row[0],))
                                 mydb.commit()
                                 st.success("Estado actualizado a Avisado")
                             except Exception as e:
                                 st.error(f"Error al actualizar el estado: {e}")
-                                
                         elif pagado:
                             try:
-                                # Actualizar a Pagado
                                 sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
                                 mycursor.execute(sql_update, (row[0],))
                                 mydb.commit()
@@ -138,11 +134,9 @@ def vencimientos_clientes(mydb, mycursor):
                                 st.error(f"Error al actualizar el estado: {e}")
 
                     elif row[10] == 'Avisado':
-                        # Checkbox para marcar como Pagado
-                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}")
+                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}_{section}")
                         if pagado:
                             try:
-                                # Actualizar a Pagado
                                 sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
                                 mycursor.execute(sql_update, (row[0],))
                                 mydb.commit()
@@ -150,14 +144,11 @@ def vencimientos_clientes(mydb, mycursor):
                             except Exception as e:
                                 st.error(f"Error al actualizar el estado: {e}")
 
-
-    mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días", mostrar_checkbox=True)
-    mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días", mostrar_checkbox=True)
-    mostrar_tabla(result_expired, "Cuotas vencidas", mostrar_checkbox=True)
-    mostrar_tabla(result_last_20_sin_pagar, "Últimos 10 usuarios ingresados", mostrar_checkbox=True)
-    mostrar_tabla(result_last_20_pagado, "Últimos 10 pagados")
-    mostrar_tabla(result_last_20_avisado, "Últimos 10 avisados")
-    
+    # Al mostrar las tablas, ahora pasas un identificador de sección único
+    mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días", mostrar_checkbox=True, section="0_7_days")
+    mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días", mostrar_checkbox=True, section="8_15_days")
+    mostrar_tabla(result_expired, "Cuotas vencidas", mostrar_checkbox=True, section="expired")
+    mostrar_tabla(result_last_20_sin_pagar, "Últimos 10 usuarios ingresados", mostrar_checkbox=True, section="last_20_sin_pagar")
     
 
 @manejar_conexion
