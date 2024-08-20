@@ -5,8 +5,8 @@ import streamlit as st
 import datetime
 from appClientes.conexion import establecer_conexion, cerrar_conexion
 from urllib.parse import quote
-
-
+                        # Añadir tipo_estado al key para hacerlos únicos
+import time
 
 
 
@@ -68,7 +68,7 @@ def vencimientos_clientes(mydb, mycursor):
 
     today = datetime.date.today()
 
-    sql_0_7_days ="SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar', 'Avisado') ORDER BY vencimiento_de_cuota ASC"
+    sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar', 'Avisado') ORDER BY vencimiento_de_cuota ASC"
     val_0_7_days = (compañia, today, today + datetime.timedelta(days=7))
     mycursor.execute(sql_0_7_days, val_0_7_days)
     result_0_7_days = mycursor.fetchall()
@@ -95,9 +95,13 @@ def vencimientos_clientes(mydb, mycursor):
     mycursor.execute(sql_last_20_avisado)
     result_last_20_avisado = mycursor.fetchall()
 
+    sql_last_20_avisados = "SELECT * FROM customers WHERE estado = 'Avisado' ORDER BY id DESC LIMIT 20"
+    mycursor.execute(sql_last_20_avisados)
+    result_last_20_avisados = mycursor.fetchall()
+
     columnas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion", "Compañia", "Tipo de plan", "Tipo de facturacion", "Numero de cuota", "Vencimiento de cuota", "Estado"]
 
-    def mostrar_tabla(resultados, titulo, mostrar_checkbox=False, section=""):
+    def mostrar_tabla(resultados, titulo, mostrar_checkbox=False, tipo_estado=""):
         st.subheader(titulo)
         for row in resultados:
             with st.expander(f"Usuario: {row[1]} - Póliza: {row[3]}"):
@@ -114,8 +118,13 @@ def vencimientos_clientes(mydb, mycursor):
 
                 if mostrar_checkbox:
                     if row[10] == 'Sin pagar':
-                        avisado = st.checkbox("Marcar como Avisado", key=f"avisado_checkbox_{row[0]}_{section}")
-                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}_{section}")
+                        # Dentro de la función mostrar_tabla
+                        current_time = time.time()
+
+                        # Crear una clave única usando el id del usuario y la marca temporal
+                        avisado = st.checkbox("Marcar como Avisado", key=f"avisado_checkbox_{row[0]}_{current_time}")
+                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}_{current_time}")
+
                         if avisado:
                             try:
                                 sql_update = "UPDATE customers SET estado = 'Avisado' WHERE id = %s"
@@ -124,6 +133,7 @@ def vencimientos_clientes(mydb, mycursor):
                                 st.success("Estado actualizado a Avisado")
                             except Exception as e:
                                 st.error(f"Error al actualizar el estado: {e}")
+                        
                         elif pagado:
                             try:
                                 sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
@@ -132,9 +142,10 @@ def vencimientos_clientes(mydb, mycursor):
                                 st.success("Estado actualizado a Pagado")
                             except Exception as e:
                                 st.error(f"Error al actualizar el estado: {e}")
+                    
 
                     elif row[10] == 'Avisado':
-                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}_{section}")
+                        pagado = st.checkbox("Marcar como Pagado", key=f"{tipo_estado}_pagado_checkbox_{row[0]}")
                         if pagado:
                             try:
                                 sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
@@ -144,12 +155,14 @@ def vencimientos_clientes(mydb, mycursor):
                             except Exception as e:
                                 st.error(f"Error al actualizar el estado: {e}")
 
-    # Al mostrar las tablas, ahora pasas un identificador de sección único
-    mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días", mostrar_checkbox=True, section="0_7_days")
-    mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días", mostrar_checkbox=True, section="8_15_days")
-    mostrar_tabla(result_expired, "Cuotas vencidas", mostrar_checkbox=True, section="expired")
-    mostrar_tabla(result_last_20_sin_pagar, "Últimos 10 usuarios ingresados", mostrar_checkbox=True, section="last_20_sin_pagar")
-    
+
+
+    mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días", mostrar_checkbox=True, tipo_estado="sin_pagar")
+    mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días", mostrar_checkbox=True, tipo_estado="sin_pagar")
+    mostrar_tabla(result_expired, "Cuotas vencidas", mostrar_checkbox=True, tipo_estado="sin_pagar")
+    mostrar_tabla(result_last_20_sin_pagar, "Últimos 10 usuarios ingresados", mostrar_checkbox=True, tipo_estado="sin_pagar")
+    mostrar_tabla(result_last_20_pagado, "Últimos 10 pagados", tipo_estado="pagado")
+    mostrar_tabla(result_last_20_avisados, "Últimos 20 avisados", tipo_estado="avisado")
 
 @manejar_conexion
 def buscar_clientes(mydb, mycursor):
