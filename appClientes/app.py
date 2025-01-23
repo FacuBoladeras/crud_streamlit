@@ -61,6 +61,9 @@ def crear_clientes(mydb, mycursor):
         else:
             st.warning("Por favor completa todos los campos antes de continuar.")
 
+
+import datetime
+
 @manejar_conexion
 def vencimientos_clientes(mydb, mycursor):
     st.subheader("Vencimientos de cuotas 📜")
@@ -68,12 +71,12 @@ def vencimientos_clientes(mydb, mycursor):
 
     today = datetime.date.today()
 
-    sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar', 'Avisado') ORDER BY vencimiento_de_cuota ASC"
+    sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar') ORDER BY vencimiento_de_cuota ASC"
     val_0_7_days = (compañia, today, today + datetime.timedelta(days=7))
     mycursor.execute(sql_0_7_days, val_0_7_days)
     result_0_7_days = mycursor.fetchall()
 
-    sql_8_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar', 'Avisado') ORDER BY vencimiento_de_cuota ASC"
+    sql_8_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar') ORDER BY vencimiento_de_cuota ASC"
     val_8_15_days = (compañia, today + datetime.timedelta(days=8), today + datetime.timedelta(days=15))
     mycursor.execute(sql_8_15_days, val_8_15_days)
     result_8_15_days = mycursor.fetchall()
@@ -83,12 +86,12 @@ def vencimientos_clientes(mydb, mycursor):
     mycursor.execute(sql_expired, val_expired)
     result_expired = mycursor.fetchall()
 
-    def mostrar_tabla(resultados, titulo, mostrar_checkbox=False, tipo_estado=""):
+    def mostrar_tabla(resultados, titulo):
         st.subheader(titulo)
         for row in resultados:
             nombre_cliente = row[1].strip().upper()  # Eliminar espacios en blanco y convertir a mayúsculas
             poliza_cliente = row[3].strip()  # Eliminar espacios en blanco
-            
+
             with st.expander(f"**{nombre_cliente}** - Póliza: **{poliza_cliente}**", expanded=False):
                 st.markdown(
                     f"""
@@ -108,45 +111,34 @@ def vencimientos_clientes(mydb, mycursor):
                     unsafe_allow_html=True
                 )
 
+                # Mostrar checkboxes para actualizar estado
+                if row[10] == 'Sin pagar':
+                    avisado = st.checkbox("Marcar como Avisado", key=f"avisado_{row[0]}")
+                    pagado = st.checkbox("Marcar como Pagado", key=f"pagado_{row[0]}")
 
-                if mostrar_checkbox:
-                    if row[10] == 'Sin pagar':
-                        avisado = st.checkbox("Marcar como Avisado", key=f"avisado_{row[0]}")
-                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_{row[0]}")
+                    if avisado:
+                        try:
+                            sql_update = "UPDATE customers SET estado = 'Avisado' WHERE id = %s"
+                            mycursor.execute(sql_update, (row[0],))
+                            mydb.commit()
+                            st.success(f"Cliente {row[1]} marcado como 'Avisado'")
+                            st.experimental_rerun()  # Recargar la página para quitar el registro actualizado
+                        except Exception as e:
+                            st.error(f"Error al actualizar el estado: {e}")
 
-                        if avisado:
-                            try:
-                                sql_update = "UPDATE customers SET estado = 'Avisado' WHERE id = %s"
-                                mycursor.execute(sql_update, (row[0],))
-                                mydb.commit()
-                                st.success("Estado actualizado a Avisado")
-                            except Exception as e:
-                                st.error(f"Error al actualizar el estado: {e}")
+                    elif pagado:
+                        try:
+                            sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
+                            mycursor.execute(sql_update, (row[0],))
+                            mydb.commit()
+                            st.success(f"Cliente {row[1]} marcado como 'Pagado'")
+                            st.experimental_rerun()  # Recargar la página para quitar el registro actualizado
+                        except Exception as e:
+                            st.error(f"Error al actualizar el estado: {e}")
 
-                        elif pagado:
-                            try:
-                                sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
-                                mycursor.execute(sql_update, (row[0],))
-                                mydb.commit()
-                                st.success("Estado actualizado a Pagado")
-                            except Exception as e:
-                                st.error(f"Error al actualizar el estado: {e}")
-
-                    elif row[10] == 'Avisado':
-                        pagado = st.checkbox("Marcar como Pagado", key=f"{tipo_estado}_pagado_{row[0]}")
-                        if pagado:
-                            try:
-                                sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
-                                mycursor.execute(sql_update, (row[0],))
-                                mydb.commit()
-                                st.success("Estado actualizado a Pagado")
-                            except Exception as e:
-                                st.error(f"Error al actualizar el estado: {e}")
-
-
-    mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días", mostrar_checkbox=True, tipo_estado="sin_pagar")
-    mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días", mostrar_checkbox=True, tipo_estado="sin_pagar")
-    mostrar_tabla(result_expired, "Cuotas vencidas", mostrar_checkbox=True, tipo_estado="sin_pagar")
+    mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días")
+    mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días")
+    mostrar_tabla(result_expired, "Cuotas vencidas")
 
 @manejar_conexion
 def avisados(mydb, mycursor):
