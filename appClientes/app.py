@@ -83,47 +83,36 @@ def vencimientos_clientes(mydb, mycursor):
     mycursor.execute(sql_expired, val_expired)
     result_expired = mycursor.fetchall()
 
-    sql_last_20_sin_pagar = "SELECT * FROM customers WHERE estado = 'Sin pagar' ORDER BY id DESC LIMIT 10"
-    mycursor.execute(sql_last_20_sin_pagar)
-    result_last_20_sin_pagar = mycursor.fetchall()
-
-    sql_last_20_pagado = "SELECT * FROM customers WHERE estado = 'Pagado' ORDER BY id DESC LIMIT 10"
-    mycursor.execute(sql_last_20_pagado)
-    result_last_20_pagado = mycursor.fetchall()
-
-    sql_last_20_avisado = "SELECT * FROM customers WHERE estado = 'Avisado' ORDER BY id DESC LIMIT 10"
-    mycursor.execute(sql_last_20_avisado)
-    result_last_20_avisado = mycursor.fetchall()
-
-    sql_last_20_avisados = "SELECT * FROM customers WHERE estado = 'Avisado' ORDER BY id DESC LIMIT 20"
-    mycursor.execute(sql_last_20_avisados)
-    result_last_20_avisados = mycursor.fetchall()
-
-    columnas = ["id", "Nombre", "Contacto", "Poliza", "Descripcion", "Compañia", "Tipo de plan", "Tipo de facturacion", "Numero de cuota", "Vencimiento de cuota", "Estado"]
-
     def mostrar_tabla(resultados, titulo, mostrar_checkbox=False, tipo_estado=""):
         st.subheader(titulo)
         for row in resultados:
-            with st.expander(f"Usuario: {row[1]} - Póliza: {row[3]}"):
-                st.text(f"Nombre: {row[1]}")
-                st.text(f"Contacto: {row[2]}")
-                st.text(f"Póliza: {row[3]}")
-                st.text(f"Descripcion: {row[4]}")
-                st.text(f"Compañia: {row[5]}")
-                st.text(f"Tipo de plan: {row[6]}")
-                st.text(f"Tipo de facturacion: {row[7]}")
-                st.text(f"Numero de cuota: {row[8]}")
-                st.text(f"Vencimiento de cuota: {row[9]}")
-                st.text(f"Estado: {row[10]}")
+            nombre_cliente = row[1].strip().upper()  # Eliminar espacios en blanco y convertir a mayúsculas
+            poliza_cliente = row[3].strip()  # Eliminar espacios en blanco
+            
+            with st.expander(f"**{nombre_cliente}** - Póliza: **{poliza_cliente}**", expanded=False):
+                st.markdown(
+                    f"""
+                    <div style="font-size: 16px; line-height: 1.5; color: #333;">
+                        <p><strong>Nombre:</strong> <span style="font-weight:bold; color:#3C559A;">{row[1]}</span></p>
+                        <p><strong>Contacto:</strong> {row[2]}</p>
+                        <p><strong>Póliza:</strong> {row[3]}</p>
+                        <p><strong>Descripción:</strong> {row[4]}</p>
+                        <p><strong>Compañía:</strong> {row[5]}</p>
+                        <p><strong>Tipo de plan:</strong> {row[6]}</p>
+                        <p><strong>Tipo de facturación:</strong> {row[7]}</p>
+                        <p><strong>Número de cuota:</strong> {row[8]}</p>
+                        <p><strong>Vencimiento de cuota:</strong> {row[9]}</p>
+                        <p><strong>Estado:</strong> {row[10]}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
 
                 if mostrar_checkbox:
                     if row[10] == 'Sin pagar':
-                        # Dentro de la función mostrar_tabla
-                        current_time = time.time()
-
-                        # Crear una clave única usando el id del usuario y la marca temporal
-                        avisado = st.checkbox("Marcar como Avisado", key=f"avisado_checkbox_{row[0]}_{current_time}")
-                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_checkbox_{row[0]}_{current_time}")
+                        avisado = st.checkbox("Marcar como Avisado", key=f"avisado_{row[0]}")
+                        pagado = st.checkbox("Marcar como Pagado", key=f"pagado_{row[0]}")
 
                         if avisado:
                             try:
@@ -133,7 +122,7 @@ def vencimientos_clientes(mydb, mycursor):
                                 st.success("Estado actualizado a Avisado")
                             except Exception as e:
                                 st.error(f"Error al actualizar el estado: {e}")
-                        
+
                         elif pagado:
                             try:
                                 sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
@@ -142,10 +131,9 @@ def vencimientos_clientes(mydb, mycursor):
                                 st.success("Estado actualizado a Pagado")
                             except Exception as e:
                                 st.error(f"Error al actualizar el estado: {e}")
-                    
 
                     elif row[10] == 'Avisado':
-                        pagado = st.checkbox("Marcar como Pagado", key=f"{tipo_estado}_pagado_checkbox_{row[0]}")
+                        pagado = st.checkbox("Marcar como Pagado", key=f"{tipo_estado}_pagado_{row[0]}")
                         if pagado:
                             try:
                                 sql_update = "UPDATE customers SET estado = 'Pagado' WHERE id = %s"
@@ -156,13 +144,11 @@ def vencimientos_clientes(mydb, mycursor):
                                 st.error(f"Error al actualizar el estado: {e}")
 
 
-
     mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días", mostrar_checkbox=True, tipo_estado="sin_pagar")
     mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días", mostrar_checkbox=True, tipo_estado="sin_pagar")
     mostrar_tabla(result_expired, "Cuotas vencidas", mostrar_checkbox=True, tipo_estado="sin_pagar")
-    mostrar_tabla(result_last_20_sin_pagar, "Últimos 10 usuarios ingresados", mostrar_checkbox=True, tipo_estado="sin_pagar")
-    mostrar_tabla(result_last_20_pagado, "Últimos 10 pagados", tipo_estado="pagado")
-    mostrar_tabla(result_last_20_avisados, "Últimos 20 avisados", tipo_estado="avisado")
+
+
 
 @manejar_conexion
 def buscar_clientes(mydb, mycursor):
