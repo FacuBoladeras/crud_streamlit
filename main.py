@@ -9,6 +9,7 @@ from streamlit_option_menu import option_menu
 from appClientes.app import (
     crear_clientes,
     vencimientos_clientes,
+    avisados,
     modificar_clientes,
     renovar_clientes,
     eliminar_clientes,
@@ -90,6 +91,7 @@ def main_clientes():
     options = {
         "Crear 📝": crear_clientes,
         "Vencimientos ⚠️": vencimientos_clientes,
+        "Avisados - Pagados 🗣️ " : avisados,
         "Buscar 🔎": buscar_clientes,
         "Modificar ✏️": modificar_clientes,
         "Renovar ♻️": renovar_clientes,

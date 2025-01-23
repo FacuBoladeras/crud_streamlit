@@ -148,6 +148,60 @@ def vencimientos_clientes(mydb, mycursor):
     mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días", mostrar_checkbox=True, tipo_estado="sin_pagar")
     mostrar_tabla(result_expired, "Cuotas vencidas", mostrar_checkbox=True, tipo_estado="sin_pagar")
 
+@manejar_conexion
+def avisados(mydb, mycursor):
+    
+
+    # Consulta SQL para obtener los últimos 20 clientes con estado "Avisado"
+    sql_avisado = """
+        SELECT id, name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, 
+               numero_de_cuota, vencimiento_de_cuota, estado 
+        FROM customers 
+        WHERE estado = 'Avisado' 
+        ORDER BY id DESC 
+        LIMIT 20
+    """
+    mycursor.execute(sql_avisado)
+    resultados_avisado = mycursor.fetchall()
+
+    # Consulta SQL para obtener los últimos 20 clientes con estado "Pagado"
+    sql_pagado = """
+        SELECT id, name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, 
+               numero_de_cuota, vencimiento_de_cuota, estado 
+        FROM customers 
+        WHERE estado = 'Pagado' 
+        ORDER BY id DESC 
+        LIMIT 20
+    """
+    mycursor.execute(sql_pagado)
+    resultados_pagado = mycursor.fetchall()
+
+    # Definir nombres de columnas
+    columnas = [
+        "ID", "Nombre", "Contacto", "Póliza", "Descripción", 
+        "Compañía", "Tipo de Plan", "Tipo de Facturación", 
+        "Número de Cuota", "Vencimiento de Cuota", "Estado"
+    ]
+
+    # Mostrar los clientes "Avisado"
+    st.subheader("Avisados")
+    if resultados_avisado:
+        df_avisado = pd.DataFrame(resultados_avisado, columns=columnas)
+        st.dataframe(df_avisado, hide_index=True, use_container_width=True)
+    else:
+        st.info("No hay clientes con estado 'Avisado' en este momento.")
+
+    # Espacio entre los DataFrames
+    st.markdown("---")
+
+    # Mostrar los clientes "Pagado"
+    st.subheader("Pagados")
+    if resultados_pagado:
+        df_pagado = pd.DataFrame(resultados_pagado, columns=columnas)
+        st.dataframe(df_pagado, hide_index=True, use_container_width=True)
+    else:
+        st.info("No hay clientes con estado 'Pagado' en este momento.")
+
 
 
 @manejar_conexion
