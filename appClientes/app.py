@@ -71,20 +71,53 @@ def vencimientos_clientes(mydb, mycursor):
 
     today = datetime.date.today()
 
-    sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar') ORDER BY vencimiento_de_cuota ASC"
+    # Consultas SQL
+    sql_0_7_days = """
+        SELECT * FROM customers 
+        WHERE compañia = %s 
+        AND vencimiento_de_cuota BETWEEN %s AND %s 
+        AND estado IN ('Sin pagar') 
+        ORDER BY vencimiento_de_cuota ASC
+    """
     val_0_7_days = (compañia, today, today + datetime.timedelta(days=7))
     mycursor.execute(sql_0_7_days, val_0_7_days)
     result_0_7_days = mycursor.fetchall()
 
-    sql_8_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar') ORDER BY vencimiento_de_cuota ASC"
+    sql_8_15_days = """
+        SELECT * FROM customers 
+        WHERE compañia = %s 
+        AND vencimiento_de_cuota BETWEEN %s AND %s 
+        AND estado IN ('Sin pagar') 
+        ORDER BY vencimiento_de_cuota ASC
+    """
     val_8_15_days = (compañia, today + datetime.timedelta(days=8), today + datetime.timedelta(days=15))
     mycursor.execute(sql_8_15_days, val_8_15_days)
     result_8_15_days = mycursor.fetchall()
 
-    sql_expired = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota < %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC LIMIT 20"
+    sql_expired = """
+        SELECT * FROM customers 
+        WHERE compañia = %s 
+        AND vencimiento_de_cuota < %s 
+        AND estado = 'Sin pagar' 
+        ORDER BY vencimiento_de_cuota ASC 
+        LIMIT 20
+    """
     val_expired = (compañia, today)
     mycursor.execute(sql_expired, val_expired)
     result_expired = mycursor.fetchall()
+
+    # Consulta para los últimos 10 clientes ingresados
+    sql_last_10 = """
+        SELECT * FROM customers 
+        WHERE compañia = %s 
+        ORDER BY id DESC 
+        LIMIT 10
+    """
+    val_last_10 = (compañia,)
+    mycursor.execute(sql_last_10, val_last_10)
+    result_last_10 = mycursor.fetchall()
+
+    
 
     def mostrar_tabla(resultados, titulo):
         st.subheader(titulo)
@@ -111,10 +144,12 @@ def vencimientos_clientes(mydb, mycursor):
                     unsafe_allow_html=True
                 )
 
-                # Mostrar checkboxes para actualizar estado
+                # Generar clave única con el ID y la marca de tiempo en milisegundos
+                unique_key = lambda prefix, id: f"{prefix}_{id}_{int(time.time() * 1000)}"
+
                 if row[10] == 'Sin pagar':
-                    avisado = st.checkbox("Marcar como Avisado", key=f"avisado_{row[0]}")
-                    pagado = st.checkbox("Marcar como Pagado", key=f"pagado_{row[0]}")
+                    avisado = st.checkbox("Marcar como Avisado", key=unique_key("avisado", row[0]))
+                    pagado = st.checkbox("Marcar como Pagado", key=unique_key("pagado", row[0]))
 
                     if avisado:
                         try:
@@ -122,7 +157,7 @@ def vencimientos_clientes(mydb, mycursor):
                             mycursor.execute(sql_update, (row[0],))
                             mydb.commit()
                             st.success(f"Cliente {row[1]} marcado como 'Avisado'")
-                            st.experimental_rerun()  # Recargar la página para quitar el registro actualizado
+                            st.rerun()  # Recargar la página para quitar el registro actualizado
                         except Exception as e:
                             st.error(f"Error al actualizar el estado: {e}")
 
@@ -132,13 +167,19 @@ def vencimientos_clientes(mydb, mycursor):
                             mycursor.execute(sql_update, (row[0],))
                             mydb.commit()
                             st.success(f"Cliente {row[1]} marcado como 'Pagado'")
-                            st.experimental_rerun()  # Recargar la página para quitar el registro actualizado
+                            st.rerun()  # Recargar la página para quitar el registro actualizado
                         except Exception as e:
                             st.error(f"Error al actualizar el estado: {e}")
 
+
+    # Mostrar todas las tablas de vencimientos
     mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días")
     mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días")
     mostrar_tabla(result_expired, "Cuotas vencidas")
+
+    # Mostrar últimos 10 clientes ingresados
+    mostrar_tabla(result_last_10, "Últimos 10 clientes ingresados")
+
 
 @manejar_conexion
 def avisados(mydb, mycursor):
