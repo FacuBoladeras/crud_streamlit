@@ -23,3 +23,5 @@ nohup python3 -m streamlit run main.py
 ps aux | grep "python3 -m streamlit run main.py"
 kill -9 24122
 git pull origin main
+
+

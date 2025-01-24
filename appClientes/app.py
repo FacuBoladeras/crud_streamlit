@@ -62,6 +62,7 @@ def crear_clientes(mydb, mycursor):
             st.warning("Por favor completa todos los campos antes de continuar.")
 
 
+import streamlit as st
 import datetime
 
 @manejar_conexion
@@ -71,53 +72,20 @@ def vencimientos_clientes(mydb, mycursor):
 
     today = datetime.date.today()
 
-    # Consultas SQL
-    sql_0_7_days = """
-        SELECT * FROM customers 
-        WHERE compañia = %s 
-        AND vencimiento_de_cuota BETWEEN %s AND %s 
-        AND estado IN ('Sin pagar') 
-        ORDER BY vencimiento_de_cuota ASC
-    """
+    sql_0_7_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar') ORDER BY vencimiento_de_cuota ASC"
     val_0_7_days = (compañia, today, today + datetime.timedelta(days=7))
     mycursor.execute(sql_0_7_days, val_0_7_days)
     result_0_7_days = mycursor.fetchall()
 
-    sql_8_15_days = """
-        SELECT * FROM customers 
-        WHERE compañia = %s 
-        AND vencimiento_de_cuota BETWEEN %s AND %s 
-        AND estado IN ('Sin pagar') 
-        ORDER BY vencimiento_de_cuota ASC
-    """
+    sql_8_15_days = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota BETWEEN %s AND %s AND estado IN ('Sin pagar') ORDER BY vencimiento_de_cuota ASC"
     val_8_15_days = (compañia, today + datetime.timedelta(days=8), today + datetime.timedelta(days=15))
     mycursor.execute(sql_8_15_days, val_8_15_days)
     result_8_15_days = mycursor.fetchall()
 
-    sql_expired = """
-        SELECT * FROM customers 
-        WHERE compañia = %s 
-        AND vencimiento_de_cuota < %s 
-        AND estado = 'Sin pagar' 
-        ORDER BY vencimiento_de_cuota ASC 
-        LIMIT 20
-    """
+    sql_expired = "SELECT * FROM customers WHERE compañia = %s AND vencimiento_de_cuota < %s AND estado = 'Sin pagar' ORDER BY vencimiento_de_cuota ASC LIMIT 20"
     val_expired = (compañia, today)
     mycursor.execute(sql_expired, val_expired)
     result_expired = mycursor.fetchall()
-
-    # Consulta para los últimos 10 clientes ingresados
-    sql_last_10 = """
-        SELECT * FROM customers 
-        WHERE compañia = %s 
-        ORDER BY id DESC 
-        LIMIT 10
-    """
-    val_last_10 = (compañia,)
-    mycursor.execute(sql_last_10, val_last_10)
-    result_last_10 = mycursor.fetchall()
-
-    
 
     def mostrar_tabla(resultados, titulo):
         st.subheader(titulo)
@@ -144,12 +112,10 @@ def vencimientos_clientes(mydb, mycursor):
                     unsafe_allow_html=True
                 )
 
-                # Generar clave única con el ID y la marca de tiempo en milisegundos
-                unique_key = lambda prefix, id: f"{prefix}_{id}_{int(time.time() * 1000)}"
-
+                # Mostrar checkboxes para actualizar estado
                 if row[10] == 'Sin pagar':
-                    avisado = st.checkbox("Marcar como Avisado", key=unique_key("avisado", row[0]))
-                    pagado = st.checkbox("Marcar como Pagado", key=unique_key("pagado", row[0]))
+                    avisado = st.checkbox("Marcar como Avisado", key=f"avisado_{row[0]}")
+                    pagado = st.checkbox("Marcar como Pagado", key=f"pagado_{row[0]}")
 
                     if avisado:
                         try:
@@ -157,7 +123,7 @@ def vencimientos_clientes(mydb, mycursor):
                             mycursor.execute(sql_update, (row[0],))
                             mydb.commit()
                             st.success(f"Cliente {row[1]} marcado como 'Avisado'")
-                            st.rerun()  # Recargar la página para quitar el registro actualizado
+                            st.experimental_rerun()  # Recargar la página para quitar el registro actualizado
                         except Exception as e:
                             st.error(f"Error al actualizar el estado: {e}")
 
@@ -167,18 +133,42 @@ def vencimientos_clientes(mydb, mycursor):
                             mycursor.execute(sql_update, (row[0],))
                             mydb.commit()
                             st.success(f"Cliente {row[1]} marcado como 'Pagado'")
-                            st.rerun()  # Recargar la página para quitar el registro actualizado
+                            st.experimental_rerun()  # Recargar la página para quitar el registro actualizado
                         except Exception as e:
                             st.error(f"Error al actualizar el estado: {e}")
 
-
-    # Mostrar todas las tablas de vencimientos
     mostrar_tabla(result_0_7_days, "Vencimiento en los próximos 7 días")
     mostrar_tabla(result_8_15_days, "Vencimiento desde los 8 a los 15 días")
     mostrar_tabla(result_expired, "Cuotas vencidas")
 
-    # Mostrar últimos 10 clientes ingresados
-    mostrar_tabla(result_last_10, "Últimos 10 clientes ingresados")
+@manejar_conexion
+def ultimos_20_clientes_ingresados(mydb, mycursor):
+    st.subheader("Últimos 20 clientes ingresados 📋")
+
+    # Consulta SQL para obtener los últimos 20 clientes por orden de ingreso
+    sql_query = """
+        SELECT id, name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, 
+               numero_de_cuota, vencimiento_de_cuota, estado 
+        FROM customers 
+        ORDER BY id DESC 
+        LIMIT 20
+    """
+    mycursor.execute(sql_query)
+    resultados = mycursor.fetchall()
+
+    # Definir nombres de columnas para el DataFrame
+    columnas = [
+        "ID", "Nombre", "Contacto", "Póliza", "Descripción", 
+        "Compañía", "Tipo de Plan", "Tipo de Facturación", 
+        "Número de Cuota", "Vencimiento de Cuota", "Estado"
+    ]
+
+    # Mostrar los resultados en un dataframe de Streamlit
+    if resultados:
+        df = pd.DataFrame(resultados, columns=columnas)
+        st.dataframe(df, hide_index=True, use_container_width=True)
+    else:
+        st.info("No hay clientes ingresados en este momento.")
 
 
 @manejar_conexion

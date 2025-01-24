@@ -12,7 +12,7 @@ def establecer_conexion():
             user="admin",
             port=3306,
             password=PASS,
-            database="rabbia"
+            database="customers"
         )
         mycursor = mydb.cursor(buffered=True)
         return mydb, mycursor
