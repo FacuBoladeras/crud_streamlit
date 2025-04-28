@@ -91,11 +91,11 @@ def main_clientes():
     options = {
         "Crear 📝": crear_clientes,
         "Vencimientos ⚠️": vencimientos_clientes,
+        "Renovar ♻️": renovar_clientes,
         "Avisados - Pagados 🗣️ " : avisados,
         "Últimos ingresados 📄": ultimos_20_clientes_ingresados,
         "Buscar 🔎": buscar_clientes,
-        "Modificar ✏️": modificar_clientes,
-        "Renovar ♻️": renovar_clientes,
+        "Modificar ✏️": modificar_clientes,        
         "Eliminar ❌": eliminar_clientes,
     }
 
