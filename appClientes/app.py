@@ -5,8 +5,9 @@ import streamlit as st
 import datetime
 from appClientes.conexion import establecer_conexion, cerrar_conexion
 from urllib.parse import quote
-                        # Añadir tipo_estado al key para hacerlos únicos
 import time
+from dateutil.relativedelta import relativedelta
+from datetime import date, timedelta
 
 
 
@@ -24,6 +25,33 @@ def manejar_conexion(func):
         
         return result
     return wrapper
+
+
+def actualizar_estado_vencido(mydb, mycursor):
+    hoy = date.today()
+    sql = """
+      UPDATE customers
+         SET estado = 'Vencido'
+       WHERE vencimiento_de_cuota < %s
+         AND estado NOT IN ('Pagado', 'Vencido')
+    """
+    mycursor.execute(sql, (hoy,))
+    mydb.commit()
+    
+
+def purgar_vencidos_antiguos(mydb, mycursor):
+    hoy   = date.today()
+    corte = hoy - relativedelta(months=3)
+
+    sql_delete = """
+      DELETE FROM customers
+       WHERE estado = 'Vencido'
+         AND vencimiento_de_cuota < %s
+    """
+    mycursor.execute(sql_delete, (corte,))
+    eliminados = mycursor.rowcount
+    mydb.commit()
+    st.info(f"Se eliminaron {eliminados} registro(s) vencidos hace más de 3 meses.")
 
 
 @manejar_conexion
@@ -62,8 +90,8 @@ def crear_clientes(mydb, mycursor):
             st.warning("Por favor completa todos los campos antes de continuar.")
 
 
-import streamlit as st
-import datetime
+
+
 
 @manejar_conexion
 def vencimientos_clientes(mydb, mycursor):
@@ -172,8 +200,7 @@ def ultimos_20_clientes_ingresados(mydb, mycursor):
 
 
 @manejar_conexion
-def avisados(mydb, mycursor):
-    
+def avisados(mydb, mycursor):    
 
     # Consulta SQL para obtener los últimos 20 clientes con estado "Avisado"
     sql_avisado = """
@@ -366,52 +393,165 @@ def modificar_clientes(mydb, mycursor):
 
 
 
+
 @manejar_conexion
 def renovar_clientes(mydb, mycursor):
-        st.subheader("Renovar cuota ♻️")        
-        # Campo para ingresar el valor de la póliza a filtrar
-        poliza_value = st.text_input("Ingrese el valor de la póliza a filtrar").strip()
+    st.subheader("🔄 Renovar y gestionar cuotas")
+    
+    # 1) Marca y purga vencidos antiguos
+    actualizar_estado_vencido(mydb, mycursor)
+    purgar_vencidos_antiguos(mydb, mycursor)
 
-        # Consulta SQL para buscar el último registro con el valor de la póliza ingresado
-        sql = "SELECT * FROM customers WHERE poliza = %s ORDER BY id DESC LIMIT 1"
-        val = (poliza_value,)
-        mycursor.execute(sql, val)
-        result = mycursor.fetchone()  # Obtener el último registro que coincida (debería ser único)
+    # 2) Fechas de referencia
+    hoy = date.today()
+    soon_limit = hoy + timedelta(days=7)
 
+    # 3) Definición de consultas
+    sql_proximos = """
+      SELECT id, name, contacto, poliza, descripcion,
+             compañia, tipo_de_plan, tipo_de_facturacion,
+             numero_de_cuota, vencimiento_de_cuota, estado
+        FROM customers
+       WHERE vencimiento_de_cuota BETWEEN %s AND %s
+       ORDER BY name ASC, vencimiento_de_cuota ASC
+    """
+    sql_vencidos = """
+      SELECT id, name, contacto, poliza, descripcion,
+             compañia, tipo_de_plan, tipo_de_facturacion,
+             numero_de_cuota, vencimiento_de_cuota, estado
+        FROM customers
+       WHERE vencimiento_de_cuota < %s
+       ORDER BY name ASC, vencimiento_de_cuota ASC
+    """
 
-        # Si se encuentra un registro coincidente, mostrar los datos actuales
-        if result:
-            st.text("ULTIMA CUOTA INGRESADA:")
-            st.text(f"Nombre actual: {result[1]}")
-            st.text(f"Contacto actual: {result[2]}")
-            st.text(f"Póliza actual: {result[3]}")
-            st.text(f"Descripcion actual: {result[4]}")
-            st.text(f"Compañia actual: {result[5]}")
-            st.text(f"Tipo de plan actual: {result[6]}")
-            st.text(f"Tipo de facturacion: {result[7]}")
-            st.text(f"Numero de cuota: {result[8]}")
-            st.text(f"Vencimiento de cuota: {result[9]}")
-            st.text(f"Estado de cuota: {result[10]}")
-            
-            
-            st.subheader("Modificar usuario ✏️")
-            # Campos para ingresar los nuevos valores  
-            numero_de_cuota = st.selectbox("Número de cuota", [0, 1, 2, 3, 4], index=[0, 1, 2, 3, 4].index(result[8]))
-            vencimiento_de_cuota = st.date_input("Vencimiento de cuota", value=result[9])
+    # 4) Mapeo de meses y función de renderizado
+    meses_map = {"Trimestral": 3, "Cuatrimestral": 4, "Semestral": 6, "Anual": 12}
+    def render_records(records, title):
+        st.markdown(f"### {title}")
+        for (
+            registro_id, name, contacto, poliza, descripcion,
+            compañia, tipo_de_plan, tipo_de_facturacion,
+            numero_de_cuota, venc_ant, estado
+        ) in records:
+            # Limpiar espacios
+            clean_name = name.strip()
+            clean_poliza = poliza.strip()
+            clean_desc = descripcion.strip()
 
-            if st.button("Renovar", type="primary"):
-                # Crear una lista con los valores modificados
-                modified_values = list(result)
-                modified_values[8] = numero_de_cuota  # Índice de la columna 'numero_de_cuota'
-                modified_values[9] = vencimiento_de_cuota  # Índice de la columna 'vencimiento_de_cuota'
+            # Encabezado con nombre en negrita
+            header = f"🔹 **{clean_name}** — Póliza: {clean_poliza} — {clean_desc}"
+            with st.expander(header, expanded=False):
+                st.write(f"**Contacto:** {contacto}")
+                st.write(f"**Compañía:** {compañia}")
+                st.write(f"**Tipo de plan:** {tipo_de_plan}")
+                st.write(f"**Facturación:** {tipo_de_facturacion}")
+                st.write(f"**Cuota N°:** {numero_de_cuota}")
+                st.write(f"**Vencimiento:** {venc_ant}")
+                st.write(f"**Estado:** {estado}")
 
-                # Insertar un nuevo registro con los valores modificados
-                sql_insert = "INSERT INTO customers (name, contacto, poliza, descripcion, compañia, tipo_de_plan, tipo_de_facturacion, numero_de_cuota, vencimiento_de_cuota,estado) VALUES (%s, %s, %s, %s, %s, %s, %s, %s,%s,%s)"
-                val_insert = tuple(modified_values[1:])  # Ignorar el ID al insertar
-                mycursor.execute(sql_insert, val_insert)
-                mydb.commit()
-                
-                st.success("Datos modificados correctamente ✅")
+                col1, col2 = st.columns(2)
+                if col1.button("Renovar", key=f"ren_{registro_id}"):
+                    meses = meses_map.get(tipo_de_facturacion, 0)
+                    nueva_fecha = venc_ant + relativedelta(months=meses)
+                    sql_insert = """
+                        INSERT INTO customers
+                          (name, contacto, poliza, descripcion,
+                           compañia, tipo_de_plan, tipo_de_facturacion,
+                           numero_de_cuota, vencimiento_de_cuota, estado)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    """
+                    valores = (
+                        clean_name, contacto, clean_poliza, clean_desc,
+                        compañia, tipo_de_plan, tipo_de_facturacion,
+                        numero_de_cuota, nueva_fecha, estado
+                    )
+                    mycursor.execute(sql_insert, valores)
+                    mydb.commit()
+                    st.success(f"Póliza **{clean_poliza}** renovada hasta {nueva_fecha}")
+                    st.experimental_rerun()
+
+                if col2.button("Renovar con modificaciones", key=f"mod_{registro_id}"):
+                    st.session_state[f"modify_{registro_id}"] = True
+
+                if st.session_state.get(f"modify_{registro_id}", False):
+                    with st.form(key=f"form_mod_{registro_id}"):
+                        n_name = st.text_input("Nombre", value=clean_name, key=f"name_{registro_id}")
+                        n_contacto = st.text_input("Contacto", value=contacto, key=f"contacto_{registro_id}")
+                        n_poliza = st.text_input("Póliza", value=clean_poliza, key=f"poliza_{registro_id}")
+                        n_desc = st.text_input("Descripción", value=clean_desc, key=f"desc_{registro_id}")
+                        n_comp = st.selectbox(
+                            "Compañía", ["RIVADAVIA","RUS","COOP"],
+                            index=["RIVADAVIA","RUS","COOP"].index(compañia), key=f"comp_{registro_id}"
+                        )
+                        n_plan = st.selectbox(
+                            "Tipo de plan", ["Anual","Semestral"],
+                            index=["Anual","Semestral"].index(tipo_de_plan), key=f"plan_{registro_id}"
+                        )
+                        n_fact = st.selectbox(
+                            "Facturación", ["Trimestral","Cuatrimestral","Semestral","Anual"],
+                            index=["Trimestral","Cuatrimestral","Semestral","Anual"].index(tipo_de_facturacion), key=f"fact_{registro_id}"
+                        )
+                        n_cuota = st.selectbox(
+                            "Número de cuota", [0,1,2,3,4],
+                            index=[0,1,2,3,4].index(numero_de_cuota), key=f"cuota_{registro_id}"
+                        )
+                        n_fecha = st.date_input("Vencimiento de cuota", value=venc_ant, key=f"fecha_{registro_id}")
+                        n_estado = st.selectbox(
+                            "Estado", ["Sin pagar","Pagado","Avisado","Vencido"],
+                            index=["Sin pagar","Pagado","Avisado","Vencido"].index(estado), key=f"est_{registro_id}"
+                        )
+                        confirmar = st.form_submit_button("Confirmar renovación")
+
+                    if confirmar:
+                        sql_insert_mod = """
+                            INSERT INTO customers
+                              (name, contacto, poliza, descripcion,
+                               compañia, tipo_de_plan, tipo_de_facturacion,
+                               numero_de_cuota, vencimiento_de_cuota, estado)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        """
+                        mod_vals = (
+                            n_name, n_contacto, n_poliza, n_desc,
+                            n_comp, n_plan, n_fact, n_cuota, n_fecha, n_estado
+                        )
+                        mycursor.execute(sql_insert_mod, mod_vals)
+                        mydb.commit()
+                        st.success(f"Póliza **{n_poliza}** renovada con modificaciones.")
+                        del st.session_state[f"modify_{registro_id}"]
+                        st.experimental_rerun()
+
+    # 5) Búsqueda por póliza única
+    search_pol = st.text_input("🔍 Buscar póliza para renovación")
+    if search_pol:
+        mycursor.execute(
+            """
+              SELECT id, name, contacto, poliza, descripcion,
+                     compañia, tipo_de_plan, tipo_de_facturacion,
+                     numero_de_cuota, vencimiento_de_cuota, estado
+                FROM customers
+               WHERE poliza = %s
+               ORDER BY id DESC
+               LIMIT 1
+            """, (search_pol.strip(),)
+        )
+        single = mycursor.fetchone()
+        if single:
+            render_records([single], "Resultado de búsqueda")
+        else:
+            # render the two main blocks
+            render_records(proximos, "Próximas a vencer (7 días)")
+            render_records(vencidos,  "Ya vencidas")
+
+    # 6) Ejecutar consultas generales
+    mycursor.execute(sql_proximos, (hoy, soon_limit))
+    proximos = mycursor.fetchall()
+    mycursor.execute(sql_vencidos, (hoy,))
+    vencidos = mycursor.fetchall()
+
+    # 7) Renderizado de bloques principales
+    render_records(proximos, "Próximas a vencer (7 días)")
+    render_records(vencidos,  "Ya vencidas")
+
 
 
 @manejar_conexion

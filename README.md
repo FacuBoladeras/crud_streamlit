@@ -25,3 +25,4 @@ kill -9 24122
 git pull origin main
 
 
+git reset --hard HEAD
