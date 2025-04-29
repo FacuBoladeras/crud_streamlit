@@ -26,3 +26,6 @@ git pull origin main
 
 
 git reset --hard HEAD
+
+
+source venv/bin/activate

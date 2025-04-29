@@ -394,6 +394,11 @@ def modificar_clientes(mydb, mycursor):
 
 
 
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
+import time
+import streamlit as st
+
 @manejar_conexion
 def renovar_clientes(mydb, mycursor):
     st.subheader("🔄 Renovar y gestionar cuotas")
@@ -450,6 +455,7 @@ def renovar_clientes(mydb, mycursor):
                 st.write(f"**Estado:** {estado}")
 
                 col1, col2 = st.columns(2)
+                # Renovación simple: crea y borra previo
                 if col1.button("Renovar", key=f"ren_{registro_id}"):
                     meses = meses_map.get(tipo_de_facturacion, 0)
                     nueva_fecha = venc_ant + relativedelta(months=meses)
@@ -467,9 +473,15 @@ def renovar_clientes(mydb, mycursor):
                     )
                     mycursor.execute(sql_insert, valores)
                     mydb.commit()
-                    st.success(f"Póliza **{clean_poliza}** renovada hasta {nueva_fecha}")
+                    # Eliminar registro anterior para evitar duplicado
+                    mycursor.execute("DELETE FROM customers WHERE id = %s", (registro_id,))
+                    mydb.commit()
+                    st.success(f"Cuota anterior eliminada", icon="❌")
+                    st.success(f"Póliza **{clean_poliza}** renovada hasta {nueva_fecha}", icon="✅")
+                    time.sleep(5)
                     st.experimental_rerun()
 
+                # Renovación con modificaciones: crea, borra previo
                 if col2.button("Renovar con modificaciones", key=f"mod_{registro_id}"):
                     st.session_state[f"modify_{registro_id}"] = True
 
@@ -516,9 +528,48 @@ def renovar_clientes(mydb, mycursor):
                         )
                         mycursor.execute(sql_insert_mod, mod_vals)
                         mydb.commit()
-                        st.success(f"Póliza **{n_poliza}** renovada con modificaciones.")
+                        # Eliminar registro anterior para evitar duplicado
+                        mycursor.execute("DELETE FROM customers WHERE id = %s", (registro_id,))
+                        mydb.commit()
+                        st.success(f"Cuota anterior eliminada", icon="❌")
+                        st.success(f"Póliza **{n_poliza}** renovada con modificaciones.", icon="✅")
+                        time.sleep(5)
                         del st.session_state[f"modify_{registro_id}"]
                         st.experimental_rerun()
+
+    # 5) Búsqueda por póliza única
+    search_pol = st.text_input("🔍 Buscar póliza para renovación")
+    if search_pol:
+        mycursor.execute(
+            """
+              SELECT id, name, contacto, poliza, descripcion,
+                     compañia, tipo_de_plan, tipo_de_facturacion,
+                     numero_de_cuota, vencimiento_de_cuota, estado
+                FROM customers
+               WHERE poliza = %s
+               ORDER BY id DESC
+               LIMIT 1
+            """, (search_pol.strip(),)
+        )
+        single = mycursor.fetchone()
+        if single:
+            render_records([single], "Resultado de búsqueda")
+        else:
+            render_records(proximos, "Próximas a vencer (7 días)")
+            render_records(vencidos,  "Ya vencidas")
+        return
+
+    # 6) Ejecutar consultas generales
+    mycursor.execute(sql_proximos, (hoy, soon_limit))
+    proximos = mycursor.fetchall()
+    mycursor.execute(sql_vencidos, (hoy,))
+    vencidos = mycursor.fetchall()
+
+    # 7) Renderizado de bloques principales
+    render_records(proximos, "Próximas a vencer (7 días)")
+    render_records(vencidos,  "Ya vencidas")
+
+
 
     # 5) Búsqueda por póliza única
     search_pol = st.text_input("🔍 Buscar póliza para renovación")
