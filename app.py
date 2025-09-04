@@ -1,19 +1,14 @@
 import streamlit as st
-import datetime
-import mysql.connector
-import pandas as pd
-from dateutil.relativedelta import relativedelta
 from streamlit_option_menu import option_menu
 
 # Importar funciones de clientes
-from appClientes.app import (
+from appClientes.clientes import (
     crear_clientes,
-    vencimientos_clientes,
-    avisados,ultimos_20_clientes_ingresados,
-    modificar_clientes,
-    renovar_clientes,
+    vencimientos_clientes,    
+    ultimos_20_clientes_ingresados,
+    modificar_clientes,   
     eliminar_clientes,
-    buscar_clientes
+    buscar_clientes,
 )
 
 # Importar funciones de siniestros
@@ -90,9 +85,7 @@ def main_clientes():
     # Opciones CRUD para clientes
     options = {
         "Crear 📝": crear_clientes,
-        "Vencimientos ⚠️": vencimientos_clientes,
-        "Renovar ♻️": renovar_clientes,
-        "Avisados - Pagados 🗣️ " : avisados,
+        "Vencimientos ⚠️": vencimientos_clientes,    
         "Últimos ingresados 📄": ultimos_20_clientes_ingresados,
         "Buscar 🔎": buscar_clientes,
         "Modificar ✏️": modificar_clientes,        

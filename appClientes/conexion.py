@@ -1,32 +1,59 @@
-
-import mysql.connector
+import boto3
 import streamlit as st
-from passwords import HOST, PASS
 
+TABLE_NAME = "customers"  # cambia a "customers_v2" si ya tenés una tabla creada con otro esquema
 
-# Función para establecer la conexión con la base de datos
-def establecer_conexion():
+def _ensure_table_exists(dynamodb):
+    client = dynamodb.meta.client
     try:
-        mydb = mysql.connector.connect(
-            host=HOST,
-            user="admin",
-            port=3306,
-            password=PASS,
-            database="customers"
+        client.describe_table(TableName=TABLE_NAME)
+    except client.exceptions.ResourceNotFoundException:
+        client.create_table(
+            TableName=TABLE_NAME,
+            KeySchema=[
+                {"AttributeName": "poliza", "KeyType": "HASH"},    # PK
+                {"AttributeName": "item_id", "KeyType": "RANGE"},  # SK (uuid)
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "poliza", "AttributeType": "S"},
+                {"AttributeName": "item_id", "AttributeType": "S"},
+                {"AttributeName": "venc_yyyymmdd", "AttributeType": "N"},
+                {"AttributeName": "venc_yyyymm", "AttributeType": "S"},
+            ],
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "ByPolizaVenc",
+                    "KeySchema": [
+                        {"AttributeName": "poliza", "KeyType": "HASH"},
+                        {"AttributeName": "venc_yyyymmdd", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+                {
+                    "IndexName": "ByMonth",
+                    "KeySchema": [
+                        {"AttributeName": "venc_yyyymm", "KeyType": "HASH"},
+                        {"AttributeName": "venc_yyyymmdd", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+            ],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        mycursor = mydb.cursor(buffered=True)
-        return mydb, mycursor
-    except mysql.connector.Error as e:
-        st.error(f"Error al conectar a la base de datos: {e}")
-        return None, None
-    
-    
-# Función para cerrar la conexión con la base de datos
-def cerrar_conexion(mydb, mycursor):
+        client.get_waiter("table_exists").wait(TableName=TABLE_NAME)
+
+def get_table():
     try:
-        if mycursor:
-            mycursor.close()
-        if mydb:
-            mydb.close()
-    except mysql.connector.Error as e:
-        st.error(f"Error al cerrar la conexión: {e}")
+        dynamodb = boto3.resource("dynamodb")
+        _ensure_table_exists(dynamodb)
+        return dynamodb.Table(TABLE_NAME)
+    except Exception as e:
+        st.error(f"Error al conectar a DynamoDB: {e}")
+        return None
+
+def cerrar_conexion(_table: object) -> None:
+    return None
+
+
