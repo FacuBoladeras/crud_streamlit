@@ -1,8 +1,7 @@
 import boto3
 import streamlit as st
 
-
-TABLE_NAME = "customers"
+TABLE_NAME = "customers"  # cambia a "customers_v2" si ya tenés una tabla creada con otro esquema
 
 def _ensure_table_exists(dynamodb):
     client = dynamodb.meta.client
@@ -12,31 +11,40 @@ def _ensure_table_exists(dynamodb):
         client.create_table(
             TableName=TABLE_NAME,
             KeySchema=[
-                {"AttributeName": "poliza", "KeyType": "HASH"},   # PK
-                {"AttributeName": "id_sql", "KeyType": "RANGE"}   # SK
+                {"AttributeName": "poliza", "KeyType": "HASH"},    # PK
+                {"AttributeName": "item_id", "KeyType": "RANGE"},  # SK (uuid)
             ],
             AttributeDefinitions=[
                 {"AttributeName": "poliza", "AttributeType": "S"},
-                {"AttributeName": "id_sql", "AttributeType": "N"},
-                {"AttributeName": "vencimiento_de_cuota", "AttributeType": "S"},  # Para GSI
+                {"AttributeName": "item_id", "AttributeType": "S"},
+                {"AttributeName": "venc_yyyymmdd", "AttributeType": "N"},
+                {"AttributeName": "venc_yyyymm", "AttributeType": "S"},
             ],
             GlobalSecondaryIndexes=[
                 {
-                    "IndexName": "VencimientoIndex",
+                    "IndexName": "ByPolizaVenc",
                     "KeySchema": [
-                        {"AttributeName": "vencimiento_de_cuota", "KeyType": "HASH"},
-                        {"AttributeName": "poliza", "KeyType": "RANGE"}
+                        {"AttributeName": "poliza", "KeyType": "HASH"},
+                        {"AttributeName": "venc_yyyymmdd", "KeyType": "RANGE"},
                     ],
                     "Projection": {"ProjectionType": "ALL"},
-                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}
-                }
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+                {
+                    "IndexName": "ByMonth",
+                    "KeySchema": [
+                        {"AttributeName": "venc_yyyymm", "KeyType": "HASH"},
+                        {"AttributeName": "venc_yyyymmdd", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
             ],
             ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-
+        client.get_waiter("table_exists").wait(TableName=TABLE_NAME)
 
 def get_table():
-    """Return a DynamoDB table resource for the customers table."""
     try:
         dynamodb = boto3.resource("dynamodb")
         _ensure_table_exists(dynamodb)
@@ -45,9 +53,7 @@ def get_table():
         st.error(f"Error al conectar a DynamoDB: {e}")
         return None
 
-
-
 def cerrar_conexion(_table: object) -> None:
-    """DynamoDB no requiere cerrar conexiones explícitamente."""
     return None
+
 
