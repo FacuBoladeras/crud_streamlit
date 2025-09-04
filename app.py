@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 
 # Importar funciones de clientes
-from appClientes.app import (
+from appClientes.clientes import (
     crear_clientes,
     vencimientos_clientes,    
     ultimos_20_clientes_ingresados,
