@@ -1,7 +1,6 @@
 import streamlit as st
 from functools import wraps
 from datetime import datetime, date, timedelta
-
 from boto3.dynamodb.conditions import Attr
 
 from appClientes.conexion import get_table, cerrar_conexion
