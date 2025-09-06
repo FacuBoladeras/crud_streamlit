@@ -167,7 +167,7 @@ def buscar_clientes(table):
 
         st.markdown("**Detalles por registro**")
         for it in items:
-            with st.expander(f"{it.get('name','(Sin nombre)')} • item_id: {it['item_id']} • vence: {it.get('vencimiento_de_cuota','')}"):
+            with st.expander(f"{it.get('name','(Sin nombre)')} • vence: {it.get('vencimiento_de_cuota','')}"):
                 st.json(it)
 
 # ---------------------------
@@ -188,7 +188,7 @@ def modificar_clientes(table):
         return
 
     # Elegimos el registro a modificar
-    options = {f"{it.get('name','(Sin nombre)')} | {it.get('vencimiento_de_cuota','')} | {it['item_id']}": it for it in items}
+    options = {f"{it.get('name','(Sin nombre)')} | {it.get('vencimiento_de_cuota','')}": it for it in items}
     choice = st.selectbox("Elegí el registro", list(options.keys()))
     it = options[choice]
     item_id = it["item_id"]
@@ -216,33 +216,36 @@ def modificar_clientes(table):
 
     if st.button("Guardar cambios", type="primary"):
         # ojo: 'name' es palabra reservada → #n
-        update_expr = (
-            "SET #n=:name, contacto=:contacto, descripcion=:descripcion, "
-            "compañia=:compañia, tipo_de_plan=:tipo_de_plan, tipo_de_facturacion=:tipo_de_facturacion, "
-            "numero_de_cuota=:numero_de_cuota, estado=:estado, "
-            "vencimiento_de_cuota=:v, venc_yyyymmdd=:d, venc_yyyymm=:m, updated_at=:u"
-        )
-        values = {
-            ":name": name,
-            ":contacto": contacto,
-            ":descripcion": descripcion or "",
-            ":compañia": compañia,
-            ":tipo_de_plan": tipo_de_plan,
-            ":tipo_de_facturacion": tipo_de_facturacion,
-            ":numero_de_cuota": int(numero_de_cuota),
-            ":estado": estado,
-            ":v": vencimiento_de_cuota.isoformat(),
-            ":d": ymd_int(vencimiento_de_cuota),
-            ":m": ymd_month_str(vencimiento_de_cuota),
-            ":u": datetime.utcnow().isoformat(),
-        }
-        table.update_item(
-            Key={"poliza": poliza, "item_id": item_id},
-            UpdateExpression=update_expr,
-            ExpressionAttributeValues=values,
-            ExpressionAttributeNames={"#n": "name"},
-        )
-        st.success("Registro actualizado ✅")
+                update_expr = (
+                    "SET #n=:name, contacto=:contacto, descripcion=:descripcion, "
+                    "#comp=:compania, tipo_de_plan=:tipo_de_plan, tipo_de_facturacion=:tipo_de_facturacion, "
+                    "numero_de_cuota=:numero_de_cuota, estado=:estado, "
+                    "vencimiento_de_cuota=:v, venc_yyyymmdd=:d, venc_yyyymm=:m, updated_at=:u"
+                )
+                values = {
+                    ":name": name,
+                    ":contacto": contacto,
+                    ":descripcion": descripcion or "",
+                    ":compania": compañia,  # 👈 acá uso "compania" en vez de "compañia"
+                    ":tipo_de_plan": tipo_de_plan,
+                    ":tipo_de_facturacion": tipo_de_facturacion,
+                    ":numero_de_cuota": int(numero_de_cuota),
+                    ":estado": estado,
+                    ":v": vencimiento_de_cuota.isoformat(),
+                    ":d": ymd_int(vencimiento_de_cuota),
+                    ":m": ymd_month_str(vencimiento_de_cuota),
+                    ":u": datetime.utcnow().isoformat(),
+                }
+                table.update_item(
+                    Key={"poliza": poliza, "item_id": item_id},
+                    UpdateExpression=update_expr,
+                    ExpressionAttributeValues=values,
+                    ExpressionAttributeNames={
+                        "#n": "name",
+                        "#comp": "compañia",  # 👈 acá sí mapeamos el campo real
+                    },
+                )
+                st.success("Registro actualizado ✅")
 
 # ---------------------------
 # Eliminar (por item)
@@ -277,15 +280,38 @@ def eliminar_clientes(table):
 # ---------------------------
 @manejar_conexion
 def ultimos_20_clientes_ingresados(table):
-    st.subheader("Últimos ingresados 📄")
+    st.subheader("📄 Últimos 20 clientes ingresados")
+
+    # Traer todos los registros (puede ser costoso si hay muchos; se puede optimizar con GSI si hace falta)
     resp = table.scan()
     items = resp.get("Items", [])
-    items.sort(key=lambda x: x.get("created_at",""), reverse=True)
     
+    if not items:
+        st.info("No hay clientes cargados todavía.")
+        return
 
+    # Ordenar por fecha de creación (descendente)
+    items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
 
-from boto3.dynamodb.conditions import Key
-from datetime import datetime, date, timedelta
+    # Limitar a los últimos 20
+    items = items[:20]
+
+    # Renombrar campos para la vista
+    rows = []
+    for it in items:
+        rows.append({
+            "Nombre": it.get("name", ""),
+            "Contacto": it.get("contacto", ""),
+            "Póliza": it.get("poliza", ""),
+            "Tipo de facturación": it.get("tipo_de_facturacion", ""),
+            "Descripción": it.get("descripcion", ""),
+            "Fecha de vencimiento": it.get("vencimiento_de_cuota", ""),
+            "Compaia": it.get("compañia", ""),
+        })
+
+    # Mostrar en tabla
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
 
 # ---------------------------
 # Ventana por meses (GSI ByMonth)
@@ -332,14 +358,13 @@ def _filter_company_and_range(items: list[dict], compania: str, start_d: date, e
 # Expansores por ítem (preview + renovar)
 # ---------------------------
 def _show_due_item_expanders(table, items: list[dict]):
-    """Expansores por ítem con acciones de renovación automática y manual."""
+    """Expansores por ítem con acciones de renovación, modificación (colapsable) y eliminación."""
     for it in items:
         nombre = it.get("name", "Sin nombre")
         poliza = it["poliza"]
         item_id = it["item_id"]
         vence = it.get("vencimiento_de_cuota", "")
 
-        # Nombre en negrita en el título del expander
         with st.expander(f"**{nombre}**  ·  póliza {poliza}  ·  vence: {vence}"):
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -355,11 +380,11 @@ def _show_due_item_expanders(table, items: list[dict]):
                 st.write(it.get("descripcion",""))
 
             st.divider()
-            st.write("#### Renovar")
+            st.markdown("#### 🔄 Renovar")
 
             auto_col, manual_col = st.columns(2)
 
-            # Renovación automática según tipo de facturación
+            # --- Renovación automática ---
             with auto_col:
                 st.caption("Automática (según tipo de facturación)")
                 meses = MONTHS_BY_FACTURACION.get(it.get("tipo_de_facturacion",""), 0)
@@ -370,32 +395,84 @@ def _show_due_item_expanders(table, items: list[dict]):
                 if meses > 0 and current_date:
                     new_auto = add_months_ymd(current_date, meses)
                     st.write(f"→ Nueva fecha propuesta: **{new_auto.isoformat()}**")
-                    if st.button(f"Renovar automáticamente (+{meses} meses)", key=f"auto_{item_id}"):
+                    if st.button(f"Renovar automáticamente (+{meses} meses)", key=f"auto_{item_id}", type="primary"):
                         try:
                             update_due_item_with_audit(table, poliza, item_id, new_auto, new_estado="Sin pagar")
                             st.success("Renovado automáticamente ✅")
+                            st.experimental_rerun()
                         except Exception as e:
                             st.error(f"No se pudo renovar: {e}")
                 else:
                     st.info("Tipo de facturación o fecha inválida; usa renovación manual.")
 
-            # Renovación manual con date_input
+            # --- Renovación manual ---
             with manual_col:
                 st.caption("Manual")
                 try:
                     default_date = datetime.strptime(vence, "%Y-%m-%d").date()
                 except Exception:
                     default_date = date.today()
-                new_manual_date = st.date_input("Nueva fecha de vencimiento", value=default_date, key=f"manual_date_{item_id}")
-                new_estado = st.selectbox("Nuevo estado", ["Sin pagar","Pagado","Avisado","Vencido"],
-                                          index=["Sin pagar","Pagado","Avisado","Vencido"].index(it.get("estado","Sin pagar")),
-                                          key=f"manual_estado_{item_id}")
-                if st.button("Aplicar renovación manual", key=f"manual_btn_{item_id}"):
+                new_manual_date = st.date_input(
+                    "Nueva fecha de vencimiento", value=default_date, key=f"manual_date_{item_id}"
+                )
+
+                if st.button("Aplicar renovación manual", key=f"manual_btn_{item_id}",type="primary"):
                     try:
-                        update_due_item_with_audit(table, poliza, item_id, new_manual_date, new_estado=new_estado)
+                        update_due_item_with_audit(table, poliza, item_id, new_manual_date)
                         st.success("Fecha actualizada ✅")
+                        st.experimental_rerun()
                     except Exception as e:
                         st.error(f"No se pudo actualizar: {e}")
+
+            st.divider()
+            st.markdown("#### Modificar o Eliminar")
+
+            # --- Botones para mostrar opciones ---
+            action_col1, action_col2 = st.columns(2)
+            if action_col1.button("✏️ Modificar", key=f"mod_btn_{item_id}",type="primary"):
+                st.session_state[f"show_mod_{item_id}"] = not st.session_state.get(f"show_mod_{item_id}", False)
+            if action_col2.button("❌ Eliminar", key=f"del_btn_{item_id}",type="primary"):
+                try:
+                    table.delete_item(Key={"poliza": poliza, "item_id": item_id})
+                    st.warning("Registro eliminado correctamente ❌")
+                    st.experimental_rerun()
+                except Exception as e:
+                    st.error(f"No se pudo eliminar: {e}")
+
+            # --- Formulario de modificación (solo si se clickeó Modificar) ---
+            if st.session_state.get(f"show_mod_{item_id}", False):
+                with st.form(key=f"form_mod_{item_id}"):
+                    n_name = st.text_input("Nombre", value=it.get("name", ""))
+                    n_contacto = st.text_input("Contacto", value=it.get("contacto", ""))
+                    n_desc = st.text_input("Descripción", value=it.get("descripcion", ""))
+                    n_estado = st.selectbox(
+                        "Estado", ["Sin pagar","Pagado","Avisado","Vencido"],
+                        index=["Sin pagar","Pagado","Avisado","Vencido"].index(it.get("estado","Sin pagar")),
+                    )
+                    save_btn = st.form_submit_button("Guardar cambios ✏️")
+                    if save_btn:
+                        try:
+                            update_expr = (
+                                "SET #n=:name, contacto=:c, descripcion=:d, estado=:s, updated_at=:u"
+                            )
+                            expr_vals = {
+                                ":name": n_name,
+                                ":c": n_contacto,
+                                ":d": n_desc,
+                                ":s": n_estado,
+                                ":u": datetime.utcnow().isoformat(),
+                            }
+                            table.update_item(
+                                Key={"poliza": poliza, "item_id": item_id},
+                                UpdateExpression=update_expr,
+                                ExpressionAttributeValues=expr_vals,
+                                ExpressionAttributeNames={"#n": "name"},
+                            )
+                            st.success("Registro actualizado ✅")
+                            st.experimental_rerun()
+                        except Exception as e:
+                            st.error(f"No se pudo modificar: {e}")
+
 
 # ---------------------------
 # Vencimientos próximos (0–7 días y 8–15 días)

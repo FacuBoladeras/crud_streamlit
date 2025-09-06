@@ -21,7 +21,7 @@ from appSiniestros.Siniestros import (
 
 def main():
     st.set_page_config(layout="wide")  # Configurar el ancho y alto del lienzo
-
+    
     # Cuadro para "Seleccionar app"
     st.markdown(
         """
