@@ -9,6 +9,7 @@ from appClientes.clientes import (
     modificar_clientes,   
     eliminar_clientes,
     buscar_clientes,
+    ultimos_20_vencidos
 )
 
 # Importar funciones de siniestros
@@ -90,6 +91,7 @@ def main_clientes():
         "Buscar 🔎": buscar_clientes,
         "Modificar ✏️": modificar_clientes,        
         "Eliminar ❌": eliminar_clientes,
+        "Vencidos 📄": ultimos_20_vencidos
     }
 
     # Crear botones y actualizar el estado de la opción seleccionada con claves únicas

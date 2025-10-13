@@ -3,9 +3,9 @@ from functools import wraps
 from datetime import datetime, date, timedelta
 from uuid import uuid4
 from calendar import monthrange
-
 from boto3.dynamodb.conditions import Key, Attr
 from appClientes.conexion import get_table, cerrar_conexion
+import pandas as pd
 
 # ---------------------------
 # Helpers de conexión
@@ -188,17 +188,18 @@ def modificar_clientes(table):
         return
 
     # Elegimos el registro a modificar
-    options = {f"{it.get('name','(Sin nombre)')} | {it.get('vencimiento_de_cuota','')}": it for it in items}
+    options = {f"{it.get('name','(Sin nombre)')} | {it.get('vencimiento_de_cuota','')} | {it['item_id']}": it for it in items}
     choice = st.selectbox("Elegí el registro", list(options.keys()))
     it = options[choice]
     item_id = it["item_id"]
 
-    # Form
+    # Form campos
     name = st.text_input("Nombre", value=it.get("name", ""))
     contacto = st.text_input("Contacto", value=it.get("contacto", ""))
     descripcion = st.text_input("Descripción", value=it.get("descripcion", ""))
+    compañia_val = it.get("compañia", "RIVADAVIA")
     compañia = st.selectbox("Compañia", ["RIVADAVIA", "RUS", "COOP"],
-                            index=["RIVADAVIA","RUS","COOP"].index(it.get("compañia","RIVADAVIA")))
+                            index=["RIVADAVIA","RUS","COOP"].index(compañia_val) if compañia_val in ["RIVADAVIA","RUS","COOP"] else 0)
     tipo_de_plan = st.selectbox("Duración del plan", ["Anual","Semestral"],
                                 index=["Anual","Semestral"].index(it.get("tipo_de_plan","Anual")))
     tipo_de_facturacion = st.selectbox("Tipo de facturacion", ["Trimestral","Cuatrimestral","Semestral","Anual"],
@@ -214,8 +215,18 @@ def modificar_clientes(table):
     estado = st.selectbox("Estado", ["Sin pagar","Pagado","Avisado","Vencido"],
                           index=["Sin pagar","Pagado","Avisado","Vencido"].index(it.get("estado","Sin pagar")))
 
+    # 👉 Campo para cambiar la PÓLIZA (PK)
+    nueva_poliza = st.text_input("Nueva póliza (para cambiar la actual)", value=poliza)
+
     if st.button("Guardar cambios", type="primary"):
-        # ojo: 'name' es palabra reservada → #n
+        try:
+            # Campos derivados de fecha
+            v_iso = vencimiento_de_cuota.isoformat()
+            v_yyyymmdd = ymd_int(vencimiento_de_cuota)
+            v_yyyymm = ymd_month_str(vencimiento_de_cuota)
+
+            if nueva_poliza.strip() == poliza.strip():
+                # ==== Misma póliza → UPDATE in-place ====
                 update_expr = (
                     "SET #n=:name, contacto=:contacto, descripcion=:descripcion, "
                     "#comp=:compania, tipo_de_plan=:tipo_de_plan, tipo_de_facturacion=:tipo_de_facturacion, "
@@ -226,26 +237,59 @@ def modificar_clientes(table):
                     ":name": name,
                     ":contacto": contacto,
                     ":descripcion": descripcion or "",
-                    ":compania": compañia,  # 👈 acá uso "compania" en vez de "compañia"
+                    ":compania": compañia,  # placeholder SIN ñ
                     ":tipo_de_plan": tipo_de_plan,
                     ":tipo_de_facturacion": tipo_de_facturacion,
                     ":numero_de_cuota": int(numero_de_cuota),
                     ":estado": estado,
-                    ":v": vencimiento_de_cuota.isoformat(),
-                    ":d": ymd_int(vencimiento_de_cuota),
-                    ":m": ymd_month_str(vencimiento_de_cuota),
+                    ":v": v_iso,
+                    ":d": v_yyyymmdd,
+                    ":m": v_yyyymm,
                     ":u": datetime.utcnow().isoformat(),
                 }
                 table.update_item(
                     Key={"poliza": poliza, "item_id": item_id},
                     UpdateExpression=update_expr,
                     ExpressionAttributeValues=values,
-                    ExpressionAttributeNames={
-                        "#n": "name",
-                        "#comp": "compañia",  # 👈 acá sí mapeamos el campo real
-                    },
+                    ExpressionAttributeNames={"#n": "name", "#comp": "compañia"},
                 )
                 st.success("Registro actualizado ✅")
+
+            else:
+                # ==== Cambia la póliza (PK) → COPY + DELETE ====
+                # 1) Construimos el nuevo ítem con misma item_id y nuevos valores
+                new_item = {
+                    "poliza": nueva_poliza.strip(),
+                    "item_id": item_id,
+                    "name": name,
+                    "contacto": contacto,
+                    "descripcion": descripcion or "",
+                    "compañia": compañia,
+                    "tipo_de_plan": tipo_de_plan,
+                    "tipo_de_facturacion": tipo_de_facturacion,
+                    "numero_de_cuota": int(numero_de_cuota),
+                    "estado": estado,
+                    "vencimiento_de_cuota": v_iso,
+                    "venc_yyyymmdd": v_yyyymmdd,
+                    "venc_yyyymm": v_yyyymm,
+                    "created_at": it.get("created_at", datetime.utcnow().isoformat()),
+                    "updated_at": datetime.utcnow().isoformat(),
+                }
+
+                # 2) Creamos el nuevo (protegiendo contra sobrescritura accidental)
+                table.put_item(
+                    Item=new_item,
+                    ConditionExpression="attribute_not_exists(poliza) AND attribute_not_exists(item_id)"
+                )
+
+                # 3) Borramos el viejo
+                table.delete_item(Key={"poliza": poliza, "item_id": item_id})
+
+                st.success(f"Póliza actualizada de {poliza} → {nueva_poliza} ✅")
+                st.experimental_rerun()
+
+        except Exception as e:
+            st.error(f"No se pudo guardar: {e}")
 
 # ---------------------------
 # Eliminar (por item)
@@ -355,10 +399,10 @@ def _filter_company_and_range(items: list[dict], compania: str, start_d: date, e
     return _dedupe_and_sort(out)
 
 # ---------------------------
-# Expansores por ítem (preview + renovar)
+# Expansores por ítem (preview + renovar + modificar póliza + eliminar)
 # ---------------------------
 def _show_due_item_expanders(table, items: list[dict]):
-    """Expansores por ítem con acciones de renovación, modificación (colapsable) y eliminación."""
+    """Expansores por ítem con acciones de renovación, modificación (colapsable), cambio de póliza y eliminación."""
     for it in items:
         nombre = it.get("name", "Sin nombre")
         poliza = it["poliza"]
@@ -373,7 +417,7 @@ def _show_due_item_expanders(table, items: list[dict]):
                 st.write("**Facturación:**", it.get("tipo_de_facturacion",""))
             with col2:
                 st.write("**Cuota #:**", it.get("numero_de_cuota",""))
-                st.write("**Poliza:**", it.get("poliza",""))
+                st.write("**Póliza:**", poliza)
                 st.write("**Contacto:**", it.get("contacto",""))
             with col3:
                 st.write("**Descripción:**")
@@ -416,7 +460,7 @@ def _show_due_item_expanders(table, items: list[dict]):
                     "Nueva fecha de vencimiento", value=default_date, key=f"manual_date_{item_id}"
                 )
 
-                if st.button("Aplicar renovación manual", key=f"manual_btn_{item_id}",type="primary"):
+                if st.button("Aplicar renovación manual", key=f"manual_btn_{item_id}", type="primary"):
                     try:
                         update_due_item_with_audit(table, poliza, item_id, new_manual_date)
                         st.success("Fecha actualizada ✅")
@@ -429,9 +473,9 @@ def _show_due_item_expanders(table, items: list[dict]):
 
             # --- Botones para mostrar opciones ---
             action_col1, action_col2 = st.columns(2)
-            if action_col1.button("✏️ Modificar", key=f"mod_btn_{item_id}",type="primary"):
+            if action_col1.button("✏️ Modificar", key=f"mod_btn_{item_id}", type="primary"):
                 st.session_state[f"show_mod_{item_id}"] = not st.session_state.get(f"show_mod_{item_id}", False)
-            if action_col2.button("❌ Eliminar", key=f"del_btn_{item_id}",type="primary"):
+            if action_col2.button("❌ Eliminar", key=f"del_btn_{item_id}", type="primary"):
                 try:
                     table.delete_item(Key={"poliza": poliza, "item_id": item_id})
                     st.warning("Registro eliminado correctamente ❌")
@@ -439,7 +483,7 @@ def _show_due_item_expanders(table, items: list[dict]):
                 except Exception as e:
                     st.error(f"No se pudo eliminar: {e}")
 
-            # --- Formulario de modificación (solo si se clickeó Modificar) ---
+            # --- Formulario de modificación (incluye cambio de póliza) ---
             if st.session_state.get(f"show_mod_{item_id}", False):
                 with st.form(key=f"form_mod_{item_id}"):
                     n_name = st.text_input("Nombre", value=it.get("name", ""))
@@ -449,29 +493,66 @@ def _show_due_item_expanders(table, items: list[dict]):
                         "Estado", ["Sin pagar","Pagado","Avisado","Vencido"],
                         index=["Sin pagar","Pagado","Avisado","Vencido"].index(it.get("estado","Sin pagar")),
                     )
+                    # 👉 Campo para cambiar la póliza (PK)
+                    n_poliza = st.text_input("Nueva póliza (para cambiar la actual)", value=poliza)
+
                     save_btn = st.form_submit_button("Guardar cambios ✏️")
                     if save_btn:
                         try:
-                            update_expr = (
-                                "SET #n=:name, contacto=:c, descripcion=:d, estado=:s, updated_at=:u"
-                            )
-                            expr_vals = {
-                                ":name": n_name,
-                                ":c": n_contacto,
-                                ":d": n_desc,
-                                ":s": n_estado,
-                                ":u": datetime.utcnow().isoformat(),
-                            }
-                            table.update_item(
-                                Key={"poliza": poliza, "item_id": item_id},
-                                UpdateExpression=update_expr,
-                                ExpressionAttributeValues=expr_vals,
-                                ExpressionAttributeNames={"#n": "name"},
-                            )
-                            st.success("Registro actualizado ✅")
-                            st.experimental_rerun()
+                            if n_poliza.strip() == poliza.strip():
+                                # ==== Misma póliza → UPDATE in-place ====
+                                update_expr = "SET #n=:name, contacto=:c, descripcion=:d, estado=:s, updated_at=:u"
+                                expr_vals = {
+                                    ":name": n_name,
+                                    ":c": n_contacto,
+                                    ":d": n_desc,
+                                    ":s": n_estado,
+                                    ":u": datetime.utcnow().isoformat(),
+                                }
+                                table.update_item(
+                                    Key={"poliza": poliza, "item_id": item_id},
+                                    UpdateExpression=update_expr,
+                                    ExpressionAttributeValues=expr_vals,
+                                    ExpressionAttributeNames={"#n": "name"},
+                                )
+                                st.success("Registro actualizado ✅")
+                                st.experimental_rerun()
+                            else:
+                                # ==== Cambia la póliza (PK) → COPY + DELETE ====
+                                # Armamos el nuevo item (copiamos todo y aplicamos cambios del form)
+                                new_item = {
+                                    "poliza": n_poliza.strip(),
+                                    "item_id": item_id,
+                                    "name": n_name,
+                                    "contacto": n_contacto,
+                                    "descripcion": n_desc,
+                                    "estado": n_estado,
+                                    # campos que conservamos del original
+                                    "compañia": it.get("compañia"),
+                                    "tipo_de_plan": it.get("tipo_de_plan"),
+                                    "tipo_de_facturacion": it.get("tipo_de_facturacion"),
+                                    "numero_de_cuota": it.get("numero_de_cuota"),
+                                    "vencimiento_de_cuota": it.get("vencimiento_de_cuota"),
+                                    "venc_yyyymmdd": it.get("venc_yyyymmdd"),
+                                    "venc_yyyymm": it.get("venc_yyyymm"),
+                                    "created_at": it.get("created_at", datetime.utcnow().isoformat()),
+                                    "updated_at": datetime.utcnow().isoformat(),
+                                }
+
+                                # 1) Crear el nuevo (evitar sobreescritura)
+                                table.put_item(
+                                    Item=new_item,
+                                    ConditionExpression="attribute_not_exists(poliza) AND attribute_not_exists(item_id)"
+                                )
+                                # 2) Borrar el viejo
+                                table.delete_item(Key={"poliza": poliza, "item_id": item_id})
+
+                                st.success(f"Póliza actualizada de {poliza} → {n_poliza} ✅")
+                                st.experimental_rerun()
+
                         except Exception as e:
                             st.error(f"No se pudo modificar: {e}")
+
 
 
 # ---------------------------
@@ -569,3 +650,52 @@ def vencimientos_clientes(table):
         _show_due_item_expanders(table, items_8_15)
     else:
         st.info("No hay vencimientos entre 8 y 15 días.")
+        
+@manejar_conexion
+def ultimos_20_vencidos(table):
+    """Muestra los últimos 20 registros con fecha vencida."""
+    st.subheader("📅 Últimos 20 vencidos")
+
+    try:
+        # Obtener todos los registros (si son muchos, puedes reemplazar por scan con filtro)
+        resp = table.scan()
+        items = resp.get("Items", [])
+
+        # Filtrar por vencidos
+        hoy = date.today()
+        vencidos = [
+            it for it in items
+            if it.get("vencimiento_de_cuota")
+            and it.get("estado", "").lower() != "pagado"
+            and it.get("vencimiento_de_cuota") < hoy.isoformat()
+        ]
+
+        # Ordenar por fecha de vencimiento (descendente)
+        vencidos.sort(key=lambda x: x.get("vencimiento_de_cuota", ""), reverse=True)
+
+        # Tomar los 20 más recientes
+        ultimos_20 = vencidos[:20]
+
+        if not ultimos_20:
+            st.info("No hay registros vencidos recientes.")
+            return
+
+        # Convertir a DataFrame para visualización
+        df = pd.DataFrame(ultimos_20)
+        df_display = df[
+            ["name", "contacto", "poliza", "vencimiento_de_cuota", "estado", "compañia", "tipo_de_plan"]
+        ].rename(columns={
+            "name": "Nombre",
+            "contacto": "Contacto",
+            "poliza": "Póliza",
+            "vencimiento_de_cuota": "Vencimiento",
+            "estado": "Estado",
+            "compañia": "Compañía",
+            "tipo_de_plan": "Plan"
+        })
+
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
+        st.caption(f"Total de vencidos mostrados: {len(df_display)}")
+
+    except Exception as e:
+        st.error(f"No se pudieron obtener los registros vencidos: {e}")
