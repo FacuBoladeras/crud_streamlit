@@ -147,28 +147,89 @@ def crear_clientes(table):
         except Exception as e:
             st.error(f"No se pudo crear: {e}")
 
+
 # ---------------------------
-# Buscar (por póliza → múltiples ítems)
+# Buscar (por póliza o nombre) con render limpio y búsqueda robusta
 # ---------------------------
 @manejar_conexion
 def buscar_clientes(table):
     st.subheader("Buscar cliente 🔎")
-    poliza = st.text_input("Póliza")
-    if st.button("Buscar", type="primary") and poliza:
-        # Varios ítems por póliza → usamos query
-        resp = table.query(
-            KeyConditionExpression=Key("poliza").eq(poliza)
-        )
-        items = resp.get("Items", [])
-        if not items:
-            st.info("No se encontraron registros para esa póliza.")
-            return
-        st.markdown("**Resultados**")        
 
-        st.markdown("**Detalles por registro**")
-        for it in items:
-            with st.expander(f"{it.get('name','(Sin nombre)')} • vence: {it.get('vencimiento_de_cuota','')}"):
-                st.json(it)
+    criterio = st.radio("Buscar por:", ["Póliza", "Nombre"], horizontal=True)
+
+    def render_item(it):
+        """Renderizado limpio de un registro encontrado."""
+        with st.expander(f"📌 {it.get('name','(Sin nombre)')} • vence: {it.get('vencimiento_de_cuota','')}"):
+            st.markdown(
+                f"""
+                **Nombre:** {it.get("name", "")}  
+                **Póliza:** {it.get("poliza", "")}  
+                **Contacto:** {it.get("contacto", "")}  
+                **Descripción:** {it.get("descripcion", "")}  
+                **Compañía:** {it.get("compañia", "")}  
+                **Plan:**`{it.get("tipo_de_plan", "")}  
+                **Facturación:** {it.get("tipo_de_facturacion", "")}  
+                **Cuota actual #:** {it.get("numero_de_cuota", "")}  
+                **Vencimiento:** {it.get("vencimiento_de_cuota", "")}  
+                **Estado:** {it.get("estado", "")}                 
+                """
+            )
+
+    # -------------------------
+    # 🔍 Búsqueda por póliza
+    # -------------------------
+    if criterio == "Póliza":
+        poliza = st.text_input("Número de póliza").strip()
+        if st.button("Buscar por póliza", type="primary") and poliza:
+            resp = table.query(KeyConditionExpression=Key("poliza").eq(poliza))
+            items = resp.get("Items", [])
+
+            if not items:
+                st.info("No se encontraron registros para esa póliza.")
+                return
+
+            st.markdown("### Resultados encontrados:")
+            for it in items:
+                render_item(it)
+
+    # -------------------------
+    # 🔍 Búsqueda por nombre (robusta)
+    # -------------------------
+    elif criterio == "Nombre":
+        raw_input = st.text_input("Nombre del cliente")
+
+        if st.button("Buscar por nombre", type="primary") and raw_input:
+            # --- Normalización fuerte ---
+            query_name = raw_input.strip().casefold()
+
+            from boto3.dynamodb.conditions import Attr
+            items, last_key = [], None
+
+            # Scan porque nombre no es clave
+            while True:
+                resp = table.scan() if not last_key else table.scan(ExclusiveStartKey=last_key)
+                for it in resp.get("Items", []):
+                    stored_name = str(it.get("name", "")).strip().casefold()
+
+                    # matching flexible
+                    if query_name in stored_name:
+                        items.append(it)
+
+                last_key = resp.get("LastEvaluatedKey")
+                if not last_key:
+                    break
+
+            if not items:
+                st.info(f"No se encontraron resultados similares a **{raw_input}**.")
+                return
+
+            st.markdown(f"### Resultados similares a: **{raw_input}**")
+
+            # ordenar alfabéticamente
+            for it in sorted(items, key=lambda x: x.get("name","").lower()):
+                render_item(it)
+
+
 
 # ---------------------------
 # Modificar (elige item_id)
